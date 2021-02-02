@@ -32,6 +32,8 @@ def get_args() -> Namespace:
     parser.add_argument('--source_data', type=str, default='ru')
     parser.add_argument('--target_data', type=str, default='en')
 
+    parser.add_argument('--verbose', action='store_true')
+
     parser.add_argument('--gpu', type=int, default=1 if torch.cuda.is_available() else 0)
 
     parser.add_argument('--max_norm', type=float, default=3.)
