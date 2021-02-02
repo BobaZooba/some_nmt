@@ -121,7 +121,7 @@ if __name__ == '__main__':
     trainer = pl.Trainer(max_epochs=args.epochs,
                          # logger=pl_logger,
                          accumulate_grad_batches=args.n_batch_accumulate,
-                         use_amp=use_amp,
+                         amp_backend='apex' if use_amp else 'native',
                          precision=precision,
                          gradient_clip_val=args.max_norm,
                          gpus=args.gpu,
