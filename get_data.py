@@ -84,11 +84,6 @@ def load_open_subtitles(directory: str,
 
     for n, index in enumerate(indices):
 
-        # if len(english_texts) - n <= valid_n_pairs:
-        #     en_file, ru_file = english_valid_file, russian_valid_file
-        # else:
-        #     en_file, ru_file = english_train_file, russian_train_file
-
         if valid_counter < valid_n_pairs:
             en_file, ru_file = english_valid_file, russian_valid_file
             valid_counter += 1
