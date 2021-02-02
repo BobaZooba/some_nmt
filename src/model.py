@@ -91,7 +91,7 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
                                                      bias=False)
 
         if self.config.weight_tying and self.config.embedding_dim == self.config.model_dim:
-            self.target_embedding_layer.weight = self.token_embedding_layer.weight
+            self.target_embedding_layer.weight = self.token_prediction_head.weight
 
         self.init_weights()
 
@@ -104,8 +104,8 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
         target_lengths = self.sequence_length(target_sequence)
 
         # embeddings
-        source_emb = self.embedding_dropout(self.token_embedding_layer(source_sequence))
-        target_emb = self.embedding_dropout(self.token_embedding_layer(target_sequence))
+        source_emb = self.embedding_dropout(self.source_embedding_layer(source_sequence))
+        target_emb = self.embedding_dropout(self.target_embedding_layer(target_sequence))
 
         # encoder
         packed_source_emb = pack_padded_sequence(source_emb,
@@ -182,7 +182,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                                                      bias=False)
 
         if self.config.weight_tying and self.config.embedding_dim == self.config.model_dim:
-            self.target_embedding_layer.weight = self.token_embedding_layer.weight
+            self.target_embedding_layer.weight = self.token_prediction_head.weight
 
         self.init_weights()
 
@@ -195,8 +195,8 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         target_lengths = self.sequence_length(target_sequence)
 
         # embeddings
-        source_emb = self.embedding_dropout(self.token_embedding_layer(source_sequence))
-        target_emb = self.embedding_dropout(self.token_embedding_layer(target_sequence))
+        source_emb = self.embedding_dropout(self.source_embedding_layer(source_sequence))
+        target_emb = self.embedding_dropout(self.target_embedding_layer(target_sequence))
 
         # encoder
         packed_source_emb = pack_padded_sequence(source_emb,
