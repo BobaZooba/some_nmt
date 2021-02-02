@@ -69,27 +69,6 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         return loader
 
-    @staticmethod
-    def add_model_specific_args(parent_parser):
-
-        parser = ArgumentParser(parents=[parent_parser])
-
-        # model
-        parser.add_argument('--model_dim', type=int, default=256)
-        parser.add_argument('--feed_forward_dim', type=int, default=3072)
-        parser.add_argument('--num_layers', type=int, default=12)
-        parser.add_argument('--response_segment_index', type=int, default=1)
-        parser.add_argument('--query_segment_index', type=int, default=2)
-        parser.add_argument('--context_segment_index', type=int, default=3)
-        parser.add_argument('--weight_tying', action='store_true')
-        parser.add_argument('--dropout', type=float, default=0.1)
-        parser.add_argument('--initializer_range', type=float, default=0.02)
-
-        parser.add_argument('--learning_rate', type=float, default=0.001)
-        parser.add_argument('--weight_decay', type=float, default=0.)
-
-        return parser
-
     def forward(self,
                 source_sequence: torch.Tensor,
                 target_sequence: torch.Tensor) -> torch.Tensor:

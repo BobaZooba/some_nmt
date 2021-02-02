@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
+from argparse import Namespace
+from typing import List
 
 import torch
-from typing import List
-from argparse import Namespace
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
@@ -28,7 +28,7 @@ class BaseSequence2Sequence(nn.Module, ABC):
         super().__init__()
         self.config = config
         self.pad_index = self.config.pad_index
-        self.eos_index = self.config.pad_index
+        self.eos_index = self.config.eos_index
 
     @abstractmethod
     def init_weights(self):
@@ -93,6 +93,8 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
         if self.config.weight_tying and self.config.embedding_dim == self.config.model_dim:
             self.target_embedding_layer.weight = self.token_embedding_layer.weight
 
+        self.init_weights()
+
     def init_weights(self):
         ...
 
@@ -154,7 +156,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         self.encoder_lstm = nn.LSTM(input_size=self.config.embedding_dim,
                                     hidden_size=self.config.model_dim,
                                     num_layers=self.config.encoder_num_layers,
-                                    dropout=self.dropout.dropout,
+                                    dropout=self.config.dropout,
                                     batch_first=True,
                                     bidirectional=self.bidirectional_encoder)
 
@@ -182,8 +184,9 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         if self.config.weight_tying and self.config.embedding_dim == self.config.model_dim:
             self.target_embedding_layer.weight = self.token_embedding_layer.weight
 
+        self.init_weights()
+
     def init_weights(self):
-        # TODO
         ...
 
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:

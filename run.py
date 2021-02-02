@@ -29,7 +29,10 @@ def get_args() -> Namespace:
     parser.add_argument('--checkpoint_path', type=str, default='./data/amazon/checkpoint')
     parser.add_argument('--project_name', type=str, default='LightningConversation')
 
-    parser.add_argument('--gpus', type=int, default=1 if torch.cuda.is_available() else 0)
+    parser.add_argument('--source_data', type=str, default='ru')
+    parser.add_argument('--target_data', type=str, default='en')
+
+    parser.add_argument('--gpu', type=int, default=1 if torch.cuda.is_available() else 0)
 
     parser.add_argument('--max_norm', type=float, default=3.)
 
@@ -40,6 +43,23 @@ def get_args() -> Namespace:
     parser.add_argument('--n_batch_accumulate', type=int, default=1)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--valid_n_pairs', type=int, default=25_000)
+
+    parser.add_argument('--pad_index', type=int, default=0)
+    parser.add_argument('--eos_index', type=int, default=2)
+
+    parser.add_argument('--vocab_size', type=int, default=30_000)
+    parser.add_argument('--embedding_dim', type=int, default=128)
+    parser.add_argument('--model_dim', type=int, default=256)
+    parser.add_argument('--encoder_num_layers', type=int, default=2)
+    parser.add_argument('--decoder_num_layers', type=int, default=2)
+    parser.add_argument('--dropout', type=float, default=0.25)
+    parser.add_argument('--attention_dropout', type=float, default=0.1)
+    parser.add_argument('--weight_tying', action='store_true')
+    parser.add_argument('--bidirectional_encoder', action='store_true')
+    parser.add_argument('--use_attention', action='store_true')
+
+    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--weight_decay', type=float, default=0.)
 
     parsed_args = parser.parse_args()
 
@@ -94,7 +114,7 @@ if __name__ == '__main__':
                          use_amp=use_amp,
                          precision=precision,
                          gradient_clip_val=args.max_norm,
-                         gpus=args.gpus,
+                         gpus=args.gpu,
                          val_check_interval=5000,
                          num_sanity_val_steps=0,
                          log_save_interval=10,
