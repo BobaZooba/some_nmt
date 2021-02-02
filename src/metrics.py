@@ -15,7 +15,9 @@ def calculate_bleu(lightning_model: pl.LightningModule, config: Namespace):
 
     predicted_texts = list()
 
-    for i_batch in tqdm(range(math.ceil(len(valid_en) / config.batch_size)), desc='Inference'):
+    for i_batch in tqdm(range(math.ceil(len(valid_en) / config.batch_size)),
+                        desc='Inference', disable=not config.verbose):
+        
         batch = valid_en[i_batch * config.batch_size:(i_batch + 1) * config.batch_size]
         tokenized_batch = lightning_model.sequence2sequence_preparer.source_tokenize(batch)
         translated_batch = lightning_model.model.generate(tokenized_batch)
