@@ -81,6 +81,16 @@ class Sequence2SequencePreparer:
         self.source_language_tokenizer = source_language_tokenizer
         self.target_language_tokenizer = target_language_tokenizer
 
+    def source_tokenize(self, batch: List[str]):
+
+        tokenized_source_texts = self.source_language_tokenizer.encode_batch(batch)
+
+        source_texts_ids = [sample.ids for sample in tokenized_source_texts]
+
+        tensor_source_texts_ids: torch.Tensor = torch.tensor(source_texts_ids)
+
+        return tensor_source_texts_ids
+
     def collate(self, batch: Tuple[List[str]]) -> (torch.Tensor, torch.Tensor, torch.Tensor):
 
         source_texts: List[str] = list()

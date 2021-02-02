@@ -27,7 +27,7 @@ def get_args() -> Namespace:
 
     parser.add_argument('--directory', type=str, default='./data/')
     parser.add_argument('--checkpoint_path', type=str, default='./data/checkpoints/checkpoint')
-    parser.add_argument('--project_name', type=str, default='LightningConversation')
+    parser.add_argument('--project_name', type=str, default='NMT')
 
     parser.add_argument('--source_data', type=str, default='ru')
     parser.add_argument('--target_data', type=str, default='en')
@@ -46,6 +46,7 @@ def get_args() -> Namespace:
 
     parser.add_argument('--n_batch_accumulate', type=int, default=1)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--train_n_pairs', type=int, default=5_000_000)
     parser.add_argument('--valid_n_pairs', type=int, default=25_000)
 
     parser.add_argument('--pad_index', type=int, default=0)
@@ -88,6 +89,7 @@ if __name__ == '__main__':
             pass
         load_open_subtitles(directory=args.directory,
                             verbose=args.verbose,
+                            train_n_pairs=args.train_n_pairs,
                             valid_n_pairs=args.valid_n_pairs)
         logger.info('Data loaded')
 
