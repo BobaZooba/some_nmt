@@ -1,12 +1,11 @@
 import os
 from abc import ABC
-from argparse import ArgumentParser
 
 import numpy as np
 import pytorch_lightning as pl
 import torch
 from torch import nn
-from typing import List, Any, Dict
+from typing import Any, Dict
 from argparse import Namespace
 from src import data, model, tokenizer
 from torch.utils.data import DataLoader
@@ -83,7 +82,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         logits = self.forward(source_ids, target_ids)
 
-        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.view(-1).contiguous()
+        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.contiguous().view(-1)
 
         loss = self.criterion(prediction, target)
 
@@ -100,7 +99,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         logits = self.forward(source_ids, target_ids)
 
-        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.view(-1).contiguous()
+        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.contiguous().view(-1)
 
         loss = self.criterion(prediction, target)
 
