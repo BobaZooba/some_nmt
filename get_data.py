@@ -49,7 +49,7 @@ def clean_text(text: str) -> str:
 def load_open_subtitles(directory: str,
                         download: bool = True,
                         verbose: bool = False,
-                        train_n_pairs: int = 500_000,
+                        train_n_pairs: int = 5_000_000,
                         valid_n_pairs: int = 25_000):
 
     url: str = EN_RU_OPEN_SUBTITLES_URL
@@ -80,7 +80,9 @@ def load_open_subtitles(directory: str,
     train_counter: int = 0
     valid_counter: int = 0
 
-    for n, index in enumerate(tqdm(indices, desc='Reading data', disable=not verbose)):
+    progress_bar = tqdm(total=train_n_pairs + valid_n_pairs, desc='Reading data', disable=not verbose)
+
+    for n, index in enumerate(indices):
 
         # if len(english_texts) - n <= valid_n_pairs:
         #     en_file, ru_file = english_valid_file, russian_valid_file
@@ -98,6 +100,10 @@ def load_open_subtitles(directory: str,
 
         en_file.write(clean_text(english_texts[index]) + '\n')
         ru_file.write(clean_text(russian_texts[index]) + '\n')
+
+        progress_bar.update()
+
+    progress_bar.close()
 
     english_train_file.close()
     russian_train_file.close()
