@@ -30,7 +30,9 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         else:
             self.model = model.Sequence2SequenceModel(config=self.hparams)
 
+        # YOUR CODE STARTS
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.hparams.pad_index)
+        # YOUR CODE ENDS
 
     def configure_optimizers(self):
 
@@ -76,15 +78,21 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         return logits
 
+    # YOUR CODE STARTS
+    def compute_loss(self, logits: torch.Tensor, target_criterion_ids: torch.Tensor) -> torch.Tensor:
+        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.contiguous().view(-1)
+
+        loss = self.criterion(prediction, target)
+        return loss
+    # YOUR CODE ENDS
+
     def training_step(self, batch: Any, batch_idx: int) -> Dict:
 
         source_ids, target_ids, target_criterion_ids = batch
 
         logits = self.forward(source_ids, target_ids)
 
-        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.contiguous().view(-1)
-
-        loss = self.criterion(prediction, target)
+        loss = self.compute_loss(logits, target_criterion_ids)
 
         log = {
             'train_loss': loss.item(),
@@ -99,9 +107,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         logits = self.forward(source_ids, target_ids)
 
-        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.contiguous().view(-1)
-
-        loss = self.criterion(prediction, target)
+        loss = self.compute_loss(logits, target_criterion_ids)
 
         return {'val_loss': loss}
 
