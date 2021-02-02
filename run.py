@@ -10,7 +10,7 @@ import pytorch_lightning as pl
 from src import lightning
 
 
-def set_global_seed(seed: int):
+def set_global_seed(seed: int = 42):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
