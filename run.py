@@ -40,6 +40,7 @@ def get_args() -> Namespace:
 
     parser.add_argument('--max_norm', type=float, default=3.)
 
+    parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--max_length', type=int, default=32)
 
