@@ -29,8 +29,8 @@ def get_args() -> Namespace:
     parser.add_argument('--checkpoint_path', type=str, default='./data/checkpoints/checkpoint')
     parser.add_argument('--project_name', type=str, default='NMT')
 
-    parser.add_argument('--source_data', type=str, default='ru')
-    parser.add_argument('--target_data', type=str, default='en')
+    parser.add_argument('--source_data', type=str, default='en')
+    parser.add_argument('--target_data', type=str, default='ru')
 
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--load_data', action='store_true')
