@@ -105,7 +105,7 @@ if __name__ == '__main__':
         verbose=args.verbose,
         monitor='val_loss',
         mode='min',
-        prefix=args.model_type
+        prefix='seq2seq'
     )
 
     try:
