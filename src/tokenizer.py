@@ -91,14 +91,15 @@ class Sequence2SequencePreparer:
             target_texts.append(sample[1])
 
         tokenized_source_texts = self.source_language_tokenizer.encode_batch(source_texts)
-        tokenized_target_texts = self.target_language_tokenizer.encode_batch(source_texts)
+        tokenized_target_texts = self.target_language_tokenizer.encode_batch(target_texts)
 
         source_texts_ids: List[List[int]] = list()
         target_texts_ids: List[List[int]] = list()
 
         for sample_index in range(len(batch)):
-            source_texts_ids.append(tokenized_source_texts[sample_index].ids)
-            target_texts_ids.append(tokenized_target_texts[sample_index].ids)
+            if sum(tokenized_source_texts[sample_index].ids) > 0 and sum(tokenized_target_texts[sample_index].ids) > 0:
+                source_texts_ids.append(tokenized_source_texts[sample_index].ids)
+                target_texts_ids.append(tokenized_target_texts[sample_index].ids)
 
         tensor_source_texts_ids: torch.Tensor = torch.tensor(source_texts_ids)
         tensor_target_texts_ids: torch.Tensor = torch.tensor(target_texts_ids)
