@@ -7,7 +7,7 @@ from argparse import ArgumentParser, Namespace
 from get_data import load_open_subtitles
 from src.tokenizer import train_seq2seq_tokenizers
 import pytorch_lightning as pl
-from src import lightning
+from src import lightning, metrics
 
 
 def set_global_seed(seed: int = 42):
@@ -132,3 +132,7 @@ if __name__ == '__main__':
                          callbacks=[checkpoint_callback])
 
     trainer.fit(model)
+
+    bleu_score = metrics.calculate_bleu(lightning_model=model, config=args)
+
+    logger.info(f'BLEU score: {bleu_score:.3f}')
