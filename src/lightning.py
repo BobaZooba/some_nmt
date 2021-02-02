@@ -83,7 +83,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         logits = self.forward(source_ids, target_ids)
 
-        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.view(-1)
+        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.view(-1).contiguous()
 
         loss = self.criterion(prediction, target)
 
@@ -100,7 +100,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         logits = self.forward(source_ids, target_ids)
 
-        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.view(-1)
+        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.view(-1).contiguous()
 
         loss = self.criterion(prediction, target)
 
