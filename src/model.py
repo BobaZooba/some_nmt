@@ -35,7 +35,7 @@ class BaseSequence2Sequence(nn.Module, ABC):
         ...
 
     @abstractmethod
-    def generate(self, seed: torch.Tensor) -> torch.Tensor:
+    def generate(self, seed: torch.Tensor) -> List[int]:
         ...
 
     def tensor_trimming(self, sequence: torch.Tensor) -> (torch.Tensor, torch.Tensor, torch.Tensor):
@@ -131,8 +131,45 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
         return token_prediction
 
-    def generate(self, seed: torch.Tensor) -> torch.Tensor:
-        ...
+    def generate(self, source_text_ids: torch.Tensor) -> List[int]:
+
+        self.eval()
+
+        output_indices = [list() for _ in range(source_text_ids.size(0))]
+
+        with torch.no_grad():
+
+            source_word_embeddings = self.source_embedding_layer(source_text_ids)
+
+            source_lengths = self.sequence_length(source_text_ids)
+
+            packed_source_emb = pack_padded_sequence(source_word_embeddings,
+                                                     source_lengths,
+                                                     batch_first=True,
+                                                     enforce_sorted=False)
+
+            _, memory = self.encoder_lstm(packed_source_emb)
+
+            decoder_text_ids = torch.ones(source_text_ids.size(0), 1).long().to(source_word_embeddings.device)
+
+            decoder_word_embeddings = self.target_embedding_layer(decoder_text_ids)
+
+            for _ in range(self.config.max_length):
+
+                decoder_hiddens, memory = self.decoder_lstm(decoder_word_embeddings, memory)
+
+                token_logits = self.token_prediction_head(decoder_hiddens)
+
+                token_predictions = torch.softmax(token_logits, -1).argmax(dim=-1)
+
+                for n_sample in range(token_predictions.size(0)):
+                    token_id = token_predictions[n_sample][0].item()
+                    if token_id != self.eos_index:
+                        output_indices[n_sample].append(token_id)
+
+                decoder_word_embeddings = self.target_embedding_layer(token_predictions)
+
+        return output_indices
 
 
 class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
