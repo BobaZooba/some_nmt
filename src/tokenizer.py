@@ -31,7 +31,7 @@ def train_tokenizer(train_files: List[str],
 
     trainer = BpeTrainer(vocab_size=vocab_size, special_tokens=special_tokens)
 
-    tokenizer.train(trainer, train_files)
+    tokenizer.train(train_files, trainer)
 
     tokenizer.enable_truncation(max_length=max_length)
     tokenizer.enable_padding()

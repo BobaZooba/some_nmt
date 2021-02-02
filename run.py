@@ -33,6 +33,8 @@ def get_args() -> Namespace:
     parser.add_argument('--target_data', type=str, default='en')
 
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--load_data', action='store_true')
+    parser.add_argument('--train_tokenizers', action='store_true')
 
     parser.add_argument('--gpu', type=int, default=1 if torch.cuda.is_available() else 0)
 
@@ -77,24 +79,30 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO)
 
-    logger.info('Loading data')
-    load_open_subtitles(directory=args.directory,
-                        verbose=args.verbose,
-                        valid_n_pairs=args.valid_n_pairs)
-    logger.info('Data loaded')
+    if args.load_data:
+        logger.info('Loading data')
+        try:
+            os.mkdir(path=args.directory)
+        except FileExistsError:
+            pass
+        load_open_subtitles(directory=args.directory,
+                            verbose=args.verbose,
+                            valid_n_pairs=args.valid_n_pairs)
+        logger.info('Data loaded')
 
-    logger.info('Start seq2seq tokenizers training')
-    train_seq2seq_tokenizers(directory=args.directory,
-                             max_length=args.max_length,
-                             vocab_size=args.vocab_size)
-    logger.info('Tokenizers trained')
+    if args.train_tokenizers:
+        logger.info('Start seq2seq tokenizers training')
+        train_seq2seq_tokenizers(directory=args.directory,
+                                 max_length=args.max_length,
+                                 vocab_size=args.vocab_size)
+        logger.info('Tokenizers trained')
 
     model = lightning.LightningSequence2Sequence(hparams=args)
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         filepath=os.path.join(os.getcwd(), args.checkpoint_path),
         save_top_k=1,
-        verbose=True,
+        verbose=args.verbose,
         monitor='val_loss',
         mode='min',
         prefix=args.model_type

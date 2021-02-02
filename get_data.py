@@ -8,6 +8,8 @@ from tqdm import tqdm
 import logging
 
 EN_RU_OPEN_SUBTITLES_URL: str = 'http://opus.nlpl.eu/download.php?f=OpenSubtitles/v2018/moses/en-ru.txt.zip'
+EN_OPEN_SUBTITLES_FILE: str = 'OpenSubtitles.en-ru.en'
+RU_OPEN_SUBTITLES_FILE: str = 'OpenSubtitles.en-ru.ru'
 TEXT_NORMALIZER: Sequence = Sequence([NFD(), Lowercase(), StripAccents()])
 
 logger = logging.getLogger(__file__)
@@ -61,8 +63,8 @@ def load_open_subtitles(directory: str,
 
     logger.info('Reading files')
     with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-        english_texts = zip_ref.read('OpenSubtitles.en-ru.en').decode().split('\n')
-        russian_texts = zip_ref.read('OpenSubtitles.en-ru.ru').decode().split('\n')
+        english_texts = zip_ref.read(EN_OPEN_SUBTITLES_FILE).decode().split('\n')
+        russian_texts = zip_ref.read(RU_OPEN_SUBTITLES_FILE).decode().split('\n')
     logger.info('Reading files complete')
 
     indices = list(range(len(english_texts)))
@@ -74,7 +76,7 @@ def load_open_subtitles(directory: str,
     english_valid_file = open(os.path.join(directory, 'valid_en.txt'), 'w')
     russian_valid_file = open(os.path.join(directory, 'valid_ru.txt'), 'w')
 
-    for n, index in enumerate(tqdm(indices, desc='Reading data')):
+    for n, index in enumerate(tqdm(indices, desc='Reading data', disable=not verbose)):
 
         if len(english_texts) - n <= valid_n_pairs:
             en_file, ru_file = english_valid_file, russian_valid_file
