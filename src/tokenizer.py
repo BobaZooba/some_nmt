@@ -81,7 +81,8 @@ class Sequence2SequencePreparer:
         self.source_language_tokenizer = source_language_tokenizer
         self.target_language_tokenizer = target_language_tokenizer
 
-    def source_tokenize(self, batch: List[str]):
+    # YOUR CODE STARTS
+    def source_tokenize(self, batch: List[str]) -> torch.Tensor:
 
         tokenized_source_texts = self.source_language_tokenizer.encode_batch(batch)
 
@@ -118,3 +119,4 @@ class Sequence2SequencePreparer:
         tensor_target_texts_ids = tensor_target_texts_ids[:, :-1]
 
         return tensor_source_texts_ids, tensor_target_texts_ids, tensor_target_texts_ids_criterion
+    # YOUR CODE ENDS

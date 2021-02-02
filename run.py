@@ -8,6 +8,7 @@ from get_data import load_open_subtitles
 from src.tokenizer import train_seq2seq_tokenizers
 import pytorch_lightning as pl
 from src import lightning, metrics
+from pytorch_lightning.loggers import WandbLogger
 
 
 def set_global_seed(seed: int = 42):
@@ -29,9 +30,6 @@ def get_args() -> Namespace:
     parser.add_argument('--checkpoint_path', type=str, default='./data/checkpoints/checkpoint')
     parser.add_argument('--project_name', type=str, default='NMT')
 
-    parser.add_argument('--source_data', type=str, default='en')
-    parser.add_argument('--target_data', type=str, default='ru')
-
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--load_data', action='store_true')
     parser.add_argument('--train_tokenizers', action='store_true')
@@ -50,6 +48,7 @@ def get_args() -> Namespace:
     parser.add_argument('--valid_n_pairs', type=int, default=25_000)
 
     parser.add_argument('--pad_index', type=int, default=0)
+    parser.add_argument('--bos_index', type=int, default=1)
     parser.add_argument('--eos_index', type=int, default=2)
 
     parser.add_argument('--vocab_size', type=int, default=30_000)
@@ -129,7 +128,8 @@ if __name__ == '__main__':
                          val_check_interval=5000,
                          num_sanity_val_steps=0,
                          progress_bar_refresh_rate=10,
-                         callbacks=[checkpoint_callback])
+                         callbacks=[checkpoint_callback],
+                         logger=WandbLogger(project=args.project_name))
 
     trainer.fit(model)
 

@@ -28,6 +28,7 @@ class BaseSequence2Sequence(nn.Module, ABC):
         super().__init__()
         self.config = config
         self.pad_index = self.config.pad_index
+        self.bos_index = self.config.bos_index
         self.eos_index = self.config.eos_index
 
     @abstractmethod
@@ -98,6 +99,7 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
     def init_weights(self):
         ...
 
+    # YOUR CODE STARTS
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
 
         source_lengths = self.sequence_length(source_sequence)
@@ -130,7 +132,9 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
         token_prediction = self.token_prediction_head(decoded_sequence)
 
         return token_prediction
+    # YOUR CODE ENDS
 
+    # YOUR CODE STARTS
     def generate(self, source_text_ids: torch.Tensor) -> List[int]:
 
         self.eval()
@@ -151,6 +155,7 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
             _, memory = self.encoder_lstm(packed_source_emb)
 
             decoder_text_ids = torch.ones(source_text_ids.size(0), 1).long().to(source_word_embeddings.device)
+            decoder_text_ids *= self.bos_index
 
             decoder_word_embeddings = self.target_embedding_layer(decoder_text_ids)
 
@@ -170,6 +175,7 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
                 decoder_word_embeddings = self.target_embedding_layer(token_predictions)
 
         return output_indices
+    # YOUR CODE ENDS
 
 
 class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):

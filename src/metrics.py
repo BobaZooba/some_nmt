@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 from argparse import Namespace
 
 
+# YOUR CODE STARTS
 def calculate_bleu(lightning_model: pl.LightningModule, config: Namespace):
 
     valid_en = load_file(os.path.join(config.directory, 'valid_en.txt'))
@@ -17,7 +18,7 @@ def calculate_bleu(lightning_model: pl.LightningModule, config: Namespace):
 
     for i_batch in tqdm(range(math.ceil(len(valid_en) / config.batch_size)),
                         desc='Inference', disable=not config.verbose):
-        
+
         batch = valid_en[i_batch * config.batch_size:(i_batch + 1) * config.batch_size]
         tokenized_batch = lightning_model.sequence2sequence_preparer.source_tokenize(batch)
         translated_batch = lightning_model.model.generate(tokenized_batch)
@@ -31,3 +32,4 @@ def calculate_bleu(lightning_model: pl.LightningModule, config: Namespace):
     score = corpus_bleu(tokenized_target, tokenized_predicted)
 
     return score
+# YOUR CODE ENDS

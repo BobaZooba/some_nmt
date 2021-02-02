@@ -43,9 +43,9 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
     def get_dataloader(self, data_type: str) -> DataLoader:
 
         source_data = data.load_file(
-            os.path.join(self.hparams.directory, f'{data_type}_{self.hparams.source_data}.txt'))
+            os.path.join(self.hparams.directory, f'{data_type}_en.txt'))
         target_data = data.load_file(
-            os.path.join(self.hparams.directory, f'{data_type}_{self.hparams.target_data}.txt'))
+            os.path.join(self.hparams.directory, f'{data_type}_ru.txt'))
 
         dataset = data.Sequence2SequenceDataset(source_language_data=source_data,
                                                 target_language_data=target_data)
