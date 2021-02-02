@@ -49,6 +49,7 @@ def clean_text(text: str) -> str:
 def load_open_subtitles(directory: str,
                         download: bool = True,
                         verbose: bool = False,
+                        train_n_pairs: int = 500_000,
                         valid_n_pairs: int = 25_000):
 
     url: str = EN_RU_OPEN_SUBTITLES_URL
@@ -76,12 +77,24 @@ def load_open_subtitles(directory: str,
     english_valid_file = open(os.path.join(directory, 'valid_en.txt'), 'w')
     russian_valid_file = open(os.path.join(directory, 'valid_ru.txt'), 'w')
 
+    train_counter: int = 0
+    valid_counter: int = 0
+
     for n, index in enumerate(tqdm(indices, desc='Reading data', disable=not verbose)):
 
-        if len(english_texts) - n <= valid_n_pairs:
+        # if len(english_texts) - n <= valid_n_pairs:
+        #     en_file, ru_file = english_valid_file, russian_valid_file
+        # else:
+        #     en_file, ru_file = english_train_file, russian_train_file
+
+        if valid_counter < valid_n_pairs:
             en_file, ru_file = english_valid_file, russian_valid_file
-        else:
+            valid_counter += 1
+        elif train_counter < train_n_pairs:
             en_file, ru_file = english_train_file, russian_train_file
+            train_counter += 1
+        else:
+            break
 
         en_file.write(clean_text(english_texts[index]) + '\n')
         ru_file.write(clean_text(russian_texts[index]) + '\n')

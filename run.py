@@ -26,7 +26,7 @@ def get_args() -> Namespace:
     parser = ArgumentParser(add_help=False)
 
     parser.add_argument('--directory', type=str, default='./data/')
-    parser.add_argument('--checkpoint_path', type=str, default='./data/amazon/checkpoint')
+    parser.add_argument('--checkpoint_path', type=str, default='./data/checkpoints/checkpoint')
     parser.add_argument('--project_name', type=str, default='LightningConversation')
 
     parser.add_argument('--source_data', type=str, default='ru')
@@ -119,7 +119,6 @@ if __name__ == '__main__':
         logger.info('Train without amp, you can install it with command: make install-apex')
 
     trainer = pl.Trainer(max_epochs=args.epochs,
-                         # logger=pl_logger,
                          accumulate_grad_batches=args.n_batch_accumulate,
                          amp_backend='apex' if use_amp else 'native',
                          precision=precision,
