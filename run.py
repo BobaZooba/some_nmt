@@ -38,7 +38,6 @@ def get_args() -> Namespace:
 
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--max_length', type=int, default=32)
-    parser.add_argument('--vocab_size', type=int, default=30_000)
 
     parser.add_argument('--n_batch_accumulate', type=int, default=1)
     parser.add_argument('--seed', type=int, default=42)
