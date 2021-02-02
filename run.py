@@ -127,8 +127,7 @@ if __name__ == '__main__':
                          gpus=args.gpu,
                          val_check_interval=5000,
                          num_sanity_val_steps=0,
-                         log_save_interval=10,
                          progress_bar_refresh_rate=10,
-                         checkpoint_callback=checkpoint_callback)
+                         callbacks=[checkpoint_callback])
 
     trainer.fit(model)
