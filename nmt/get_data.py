@@ -1,3 +1,18 @@
+# Copyright 2020 Skillfactory LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# =============================================================================
+
 import os
 import random
 import zipfile
@@ -17,6 +32,13 @@ logging.basicConfig(level=logging.INFO)
 
 
 def download_file(url: str, save_path: str, verbose: bool = False):
+    """
+    Download data from some url
+    :param url: url of your data
+    :param save_path: where we need save result
+    :param verbose: progress bar
+    :return: None
+    """
     try:
         filename = save_path.split('/')[-1]
         with requests.get(url, stream=True) as req:
@@ -36,6 +58,11 @@ def download_file(url: str, save_path: str, verbose: bool = False):
 
 
 def clean_text(text: str) -> str:
+    """
+    Normalization of your text sample
+    :param text: string with text
+    :return: cleaned text
+    """
     text = TEXT_NORMALIZER.normalize_str(text)
 
     if text.startswith('- '):
@@ -48,9 +75,18 @@ def clean_text(text: str) -> str:
 
 def load_open_subtitles(directory: str,
                         download: bool = True,
-                        verbose: bool = False,
                         train_n_pairs: int = 5_000_000,
-                        valid_n_pairs: int = 25_000):
+                        valid_n_pairs: int = 25_000,
+                        verbose: bool = False):
+    """
+    Loading your data from directory and turn it into train and validation files
+    :param directory: directory where we can find data
+    :param download: do we need to download data
+    :param train_n_pairs: how many pairs we need for training
+    :param valid_n_pairs: how many pairs we need for validation
+    :param verbose: progress bar and logging
+    :return: None
+    """
 
     url: str = EN_RU_OPEN_SUBTITLES_URL
 

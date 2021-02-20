@@ -1,3 +1,18 @@
+# Copyright 2020 Skillfactory LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# =============================================================================
+
 from abc import ABC, abstractmethod
 from argparse import Namespace
 from typing import List
@@ -10,10 +25,19 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 class SpatialDropout(nn.Dropout2d):
 
     def __init__(self, p=0.5):
+        """
+        Apply special dropout that work cool for rnn models
+        :param p: probability of dropout
+        """
         super().__init__()
         self.p = p
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Perform the dropout
+        :param x: tensor with word vectors, shape = (batch size, sequence length, vector dim)
+        :return: tensor after dropout
+        """
         x = x.unsqueeze(2)
         x = x.permute(0, 3, 2, 1)
         x = super(SpatialDropout, self).forward(x)
@@ -25,6 +49,10 @@ class SpatialDropout(nn.Dropout2d):
 class BaseSequence2Sequence(nn.Module, ABC):
 
     def __init__(self, config: Namespace):
+        """
+        Base module for sequence-to-sequence task
+        :param config: hyper parameters of your experiment
+        """
         super().__init__()
         self.config = config
         self.pad_index = self.config.pad_index
@@ -33,13 +61,26 @@ class BaseSequence2Sequence(nn.Module, ABC):
 
     @abstractmethod
     def init_weights(self):
+        """Custom weight initializer"""
         ...
 
     @abstractmethod
-    def generate(self, seed: torch.Tensor) -> List[int]:
+    def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
+        """
+        Function that generate translation
+        :param source_text_ids: batch of source texts indices
+        :return: batch of predicted translation, indices
+        """
         ...
 
     def tensor_trimming(self, sequence: torch.Tensor) -> (torch.Tensor, torch.Tensor, torch.Tensor):
+        """
+        Trim off excess length for more effective inference of your model
+        :param sequence: batch of text indices, shape = (batch size, sequence length)
+        :return sequence: trimmed sequence, shape = (batch size, sequence length)
+        :return sequence_pad_mask: bool tensor with 1 for text and 0 for pad, shape = (batch size, sequence length)
+        :return sequence_lengths: tensor with lengths of every sample with no pad, shape = (batch size)
+        """
         sequence_pad_mask = sequence != self.pad_index
         sequence_lengths = sequence_pad_mask.sum(dim=1)
         sequence_max_length = sequence_lengths.max()
@@ -50,6 +91,11 @@ class BaseSequence2Sequence(nn.Module, ABC):
         return sequence, sequence_pad_mask, sequence_lengths
 
     def sequence_length(self, sequence: torch.Tensor) -> torch.Tensor:
+        """
+        Compute sequence length with no pad
+        :param sequence: batch of text indices, shape = (batch size, sequence length)
+        :return: tensor with lengths of every sample with no pad, shape = (batch size)
+        """
         sequence_pad_mask = sequence != self.pad_index
         sequence_lengths = sequence_pad_mask.sum(dim=1)
 
@@ -57,12 +103,22 @@ class BaseSequence2Sequence(nn.Module, ABC):
 
     @abstractmethod
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for sequence-to-sequence task
+        :param source_sequence: batch of source texts indices
+        :param target_sequence: batch of target texts indices
+        :return: logits of your forward pass
+        """
         ...
 
 
 class Sequence2SequenceModel(BaseSequence2Sequence):
 
     def __init__(self, config: Namespace):
+        """
+        Module for sequence-to-sequence task
+        :param config: hyper parameters of your experiment
+        """
         super().__init__(config=config)
 
         self.source_embedding_layer = nn.Embedding(num_embeddings=self.config.vocab_size,
@@ -101,6 +157,23 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
     # YOUR CODE STARTS
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for sequence-to-sequence task
+        STEPS:
+        1. Compute lengths
+        2. Turn to word embeddings source and target batch
+        3. Apply dropout
+        4. Pack source text using pack_padded_sequence
+        5. Apply encoder lstm for packed source texts
+        6. Unpack lstm results with pad_packed_sequence
+        7. Pack target text using pack_padded_sequence
+        8. Apply decoder lstm for packed target texts and using encoder lstm memory
+        9. Unpack lstm results with pad_packed_sequence
+        10. Predict the words of target texts
+        :param source_sequence: batch of source texts indices
+        :param target_sequence: batch of target texts indices
+        :return: logits of your forward pass
+        """
 
         source_lengths = self.sequence_length(source_sequence)
         target_lengths = self.sequence_length(target_sequence)
@@ -135,7 +208,19 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
     # YOUR CODE ENDS
 
     # YOUR CODE STARTS
-    def generate(self, source_text_ids: torch.Tensor) -> List[int]:
+    def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
+        """
+        Function that generate translation
+        STEPS:
+        1. Turn model to evaluation mode
+        2. Apply encoder things (use code from forward step)
+        3. Use loop to predict every token of translation, dont forget about <BOS> token
+            3.1. You need update your memory at each step
+            3.2. Use updated memory to inference for new step
+        4. Save results to list
+        :param source_text_ids: batch of source texts indices
+        :return: batch of predicted translation, indices
+        """
 
         self.eval()
 
@@ -181,9 +266,12 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
     def __init__(self, config: Namespace):
+        """
+        Module for sequence-to-sequence task with model using attention
+        :param config: hyper parameters of your experiment
+        """
         super().__init__(config=config)
 
-        self.scaling = self.config.model_dim ** 0.5
         self.bidirectional_encoder = self.config.bidirectional_encoder
 
         self.source_embedding_layer = nn.Embedding(num_embeddings=self.config.vocab_size,
@@ -232,7 +320,33 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
     def init_weights(self):
         ...
 
+    # YOUR CODE STARTS
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass for sequence-to-sequence task
+        STEPS:
+        1. Compute lengths
+        2. Turn to word embeddings source and target batch
+        3. Apply dropout
+        4. Pack source text using pack_padded_sequence
+        5. Apply encoder lstm for packed source texts
+            5.1* If you using bidirectional encoder reshape memory and get forward pass to put it into decoder
+        6. Unpack lstm results with pad_packed_sequence
+        7. Pack target text using pack_padded_sequence
+        8. Apply decoder lstm for packed target texts and using encoder lstm memory
+        9. Unpack lstm results with pad_packed_sequence
+        10. Compute the attention
+            10.1. Compute attention scores between decoder and encoder lstm hiddens
+            10.2. Compute attention distribution using softmax
+            10.3. Compute attention vectors using attention distribution and decoder lstm hiddens
+            10.4. Aggregate attention vectors with decoder lstm hiddens
+            10.5.* You also can use some of linear projections for decoder and encoder hiddens
+            10.6.* You can use linear projection for attention vectors
+        11. Predict the words of target texts
+        :param source_sequence: batch of source texts indices
+        :param target_sequence: batch of target texts indices
+        :return: logits of your forward pass
+        """
 
         source_sequence, source_pad_mask, source_lengths = self.tensor_trimming(source_sequence)
         target_lengths = self.sequence_length(target_sequence)
@@ -276,12 +390,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         value_emb = self.value_projection(encoded_sequence)
 
         attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
-        attention_scores /= self.scaling
-        attention_scores = attention_scores.masked_fill(
-            ~source_pad_mask.unsqueeze(dim=1), -float('inf'))
-
         attention_distribution = torch.softmax(attention_scores, dim=-1)
-
         attention_vectors = torch.bmm(attention_distribution, value_emb)
 
         out_emb = torch.cat((decoded_sequence, attention_vectors), dim=2)
@@ -291,11 +400,10 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         token_prediction = self.token_prediction_head(out_emb)
 
         return token_prediction
+    # YOUR CODE ENDS
 
-    def generate(self, seed: torch.Tensor) -> torch.Tensor:
-        ...
-
-    def generate_single_response(self, source_sequence: torch.Tensor, max_seq_len=32) -> List[int]:
+    # YOUR CODE STARTS
+    def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
 
         self.eval()
 
@@ -303,19 +411,19 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
         with torch.no_grad():
 
-            question_emb = self.source_embedding_layer(source_sequence)
+            question_emb = self.source_embedding_layer(source_text_ids)
             encoded_sequence, encoder_mem = self.encoder_lstm(question_emb)
 
             if self.bidirectional_encoder:
                 h_n = encoder_mem[0].view(self.encoder_lstm.num_layers, 2,
-                                          source_sequence.size(0), encoder_mem[0].size(-1))
+                                          source_text_ids.size(0), encoder_mem[0].size(-1))
 
                 c_n = encoder_mem[1].view(self.encoder_lstm.num_layers, 2,
-                                          source_sequence.size(0), encoder_mem[1].size(-1))
+                                          source_text_ids.size(0), encoder_mem[1].size(-1))
 
                 mem = (h_n[:, 0, :].contiguous(), c_n[:, 0, :].contiguous())
 
-            for timestemp in range(max_seq_len):
+            for _ in range(self.config.max_length):
 
                 decoded_sequence, decoder_mem = self.decoder_lstm(target_emb, mem)
 
@@ -324,7 +432,6 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                 value_emb = self.value_projection(encoded_sequence)
 
                 attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
-                attention_scores /= self.scaling
 
                 attention_distribution = torch.softmax(attention_scores, dim=-1)
 
@@ -334,17 +441,14 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
                 out_emb = self.attention_projection(out_emb)
 
-                token_prediction = self.token_prediction_head(out_emb)
+                token_predictions = self.token_prediction_head(out_emb)
 
-                last_index = token_prediction[0, -1, :].argmax().item()
+                for n_sample in range(token_predictions.size(0)):
+                    token_id = token_predictions[n_sample][0].item()
+                    if token_id != self.eos_index:
+                        output_indices[n_sample].append(token_id)
 
-                if last_index == 3:
-                    break
-
-                target_sequence = torch.tensor([[last_index]]).to(source_sequence.device)
-
-                target_emb = self.target_embedding_layer(target_sequence)
-
-                output_indices.append(last_index)
+                target_emb = self.target_embedding_layer(token_predictions)
 
         return output_indices
+    # YOUR CODE ENDS

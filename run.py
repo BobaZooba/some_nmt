@@ -1,13 +1,28 @@
+# Copyright 2020 Skillfactory LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# =============================================================================
+
 import logging
 import torch
 import random
 import os
 import numpy as np
 from argparse import ArgumentParser, Namespace
-from get_data import load_open_subtitles
-from src.tokenizer import train_seq2seq_tokenizers
+from nmt.get_data import load_open_subtitles
+from nmt.tokenizer import train_seq2seq_tokenizers
 import pytorch_lightning as pl
-from src import lightning, metrics
+from nmt import lightning, metrics
 from pytorch_lightning.loggers import WandbLogger
 
 
@@ -59,7 +74,6 @@ def get_args() -> Namespace:
     parser.add_argument('--dropout', type=float, default=0.25)
     parser.add_argument('--attention_dropout', type=float, default=0.1)
     parser.add_argument('--weight_tying', action='store_true')
-    parser.add_argument('--bidirectional_encoder', action='store_true')
     parser.add_argument('--use_attention', action='store_true')
 
     parser.add_argument('--learning_rate', type=float, default=0.001)
@@ -117,7 +131,7 @@ if __name__ == '__main__':
     except ModuleNotFoundError:
         use_amp = False
         precision = 32
-        logger.info('Train without amp, you can install it with command: make install-apex')
+        logger.info('Train without amp')
 
     trainer = pl.Trainer(max_epochs=args.epochs,
                          accumulate_grad_batches=args.n_batch_accumulate,
