@@ -301,14 +301,13 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
                 out_emb = self.attention_projection(out_emb)
 
-                token_predictions = self.token_prediction_head(out_emb)
+                token_logits = self.token_prediction_head(out_emb)
+                token_predictions = torch.softmax(token_logits, -1).argmax(dim=-1)
 
                 for n_sample in range(token_predictions.size(0)):
                     token_id = token_predictions[n_sample][0].item()
                     if token_id != self.eos_index:
                         output_indices[n_sample].append(token_id)
-
-                # token_predictions = token_predictions[:, -1, :].argmax().unsqueeze(dim=1)
 
                 target_emb = self.target_embedding_layer(token_predictions)
 
