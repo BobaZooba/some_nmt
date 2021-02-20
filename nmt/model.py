@@ -404,6 +404,19 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
     # YOUR CODE STARTS
     def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
+        """
+        Function that generate translation
+        STEPS:
+        1. Turn model to evaluation mode
+        2. Apply encoder things (use code from forward step)
+        3. Use loop to predict every token of translation, dont forget about <BOS> token
+            3.1. You need update your memory at each step
+            3.2. Use updated memory to inference for new step
+            3.3. Apply attention from current decoder step to every encoder hiddens
+        4. Save results to list
+        :param source_text_ids: batch of source texts indices
+        :return: batch of predicted translation, indices
+        """
 
         self.eval()
 
@@ -425,23 +438,22 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
             for _ in range(self.config.max_length):
 
-                decoded_sequence, decoder_mem = self.decoder_lstm(target_emb, mem)
+                decoded_sequence, mem = self.decoder_lstm(target_emb, mem)
 
                 query_emb = self.query_projection(decoded_sequence)
                 key_emb = self.key_projection(encoded_sequence)
                 value_emb = self.value_projection(encoded_sequence)
 
                 attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
-
                 attention_distribution = torch.softmax(attention_scores, dim=-1)
-
                 attention_vectors = torch.bmm(attention_distribution, value_emb)
 
                 out_emb = torch.cat((decoded_sequence, attention_vectors), dim=2)
 
                 out_emb = self.attention_projection(out_emb)
 
-                token_predictions = self.token_prediction_head(out_emb)
+                token_logits = self.token_prediction_head(out_emb)
+                token_predictions = torch.softmax(token_logits, -1).argmax(dim=-1)
 
                 for n_sample in range(token_predictions.size(0)):
                     token_id = token_predictions[n_sample][0].item()
