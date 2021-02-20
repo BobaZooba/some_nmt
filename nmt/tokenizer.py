@@ -32,6 +32,17 @@ def train_tokenizer(train_files: List[str],
                     add_bos_eos: bool = True,
                     max_length: int = 32,
                     vocab_size: int = 30_000) -> Tokenizer:
+    """
+    Train bpe tokenizer from files
+    :param train_files: paths to files to train tokenizer
+    :param save_path: where we need save tokenizer, .json
+    :param directory: directory where we need save all information of tokenizer
+    :param prefix: prefix to name of tokenizer
+    :param add_bos_eos: do we need add bos and eos tokens
+    :param max_length: maximum length of our texts, apply truncation if greater
+    :param vocab_size: size of tokenizer vocabulary
+    :return: trained tokenizer
+    """
     tokenizer = Tokenizer(BPE())
     tokenizer.pre_tokenizer = Whitespace()
 
@@ -65,6 +76,14 @@ def train_seq2seq_tokenizers(directory: str,
                              en_source: bool = True,
                              max_length: int = 32,
                              vocab_size: int = 30_000):
+    """
+    Train two tokenizers: for english and russian
+    :param directory: directory where we need save all information of tokenizer
+    :param en_source: flag for english is our source text
+    :param max_length: maximum length of our texts, apply truncation if greater
+    :param vocab_size: size of tokenizer vocabulary
+    :return: None
+    """
 
     languages: List[str] = ['en', 'ru']
 
@@ -82,6 +101,11 @@ def train_seq2seq_tokenizers(directory: str,
 
 
 def load_seq2seq_tokenizers(directory: str) -> (Tokenizer, Tokenizer):
+    """
+    Loading of tokenizers from directory
+    :param directory: directory with tokenizers
+    :return: tokenizers
+    """
 
     en_tokenizer = Tokenizer.from_file(os.path.join(directory, 'en_tokenizer.json'))
     ru_tokenizer = Tokenizer.from_file(os.path.join(directory, 'ru_tokenizer.json'))
@@ -92,12 +116,26 @@ def load_seq2seq_tokenizers(directory: str) -> (Tokenizer, Tokenizer):
 class Sequence2SequencePreparer:
 
     def __init__(self, source_language_tokenizer: Tokenizer, target_language_tokenizer: Tokenizer):
+        """
+        Module for handling samples and preparing it for model
+        :param source_language_tokenizer: tokenizer for source text
+        :param target_language_tokenizer: tokenizer for target text
+        """
 
         self.source_language_tokenizer = source_language_tokenizer
         self.target_language_tokenizer = target_language_tokenizer
 
     # YOUR CODE STARTS
     def source_tokenize(self, batch: List[str]) -> torch.Tensor:
+        """
+        Tokenize source texts into indices
+        STEPS:
+        1. Tokenize using self.source_language_tokenizer
+        2. Get .ids of each sample
+        3. Turn it to tensor
+        :param batch: list of strings
+        :return: tensor with source texts indices, shape = (batch size, sequence length)
+        """
 
         tokenized_source_texts = self.source_language_tokenizer.encode_batch(batch)
 
@@ -106,8 +144,21 @@ class Sequence2SequencePreparer:
         tensor_source_texts_ids: torch.Tensor = torch.tensor(source_texts_ids)
 
         return tensor_source_texts_ids
+    # YOUR CODE ENDS
 
+    # YOUR CODE STARTS
     def collate(self, batch: Tuple[List[str]]) -> (torch.Tensor, torch.Tensor, torch.Tensor):
+        """
+        Function that turn strings of source and target texts into tensor batches for model
+        STEPS:
+        1. Tokenize source and target texts using self.source_language_tokenizer and self.target_language_tokenizer
+        2. Turn it into tensors
+        3. Prepare tensor_target_texts_ids and tensor_target_texts_ids_criterion
+        :param batch: tuple of lists source and target texts
+        :return tensor_source_texts_ids: batch tensor of source texts indices
+        :return tensor_target_texts_ids: batch tensor of target texts indices including <BOS> token index
+        :return tensor_target_texts_ids_criterion: batch tensor of target texts indices including <EOS> token index
+        """
 
         source_texts: List[str] = list()
         target_texts: List[str] = list()
