@@ -188,9 +188,7 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
                                                  batch_first=True,
                                                  enforce_sorted=False)
 
-        packed_encoded_sequence, encoder_mem = self.encoder_lstm(packed_source_emb)
-
-        encoded_sequence, _ = pad_packed_sequence(packed_encoded_sequence, batch_first=True)
+        _, encoder_mem = self.encoder_lstm(packed_source_emb)
 
         # decoder
         packed_target_emb = pack_padded_sequence(target_emb,
@@ -256,6 +254,8 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
                     token_id = token_predictions[n_sample][0].item()
                     if token_id != self.eos_index:
                         output_indices[n_sample].append(token_id)
+                    else:
+                        continue
 
                 decoder_word_embeddings = self.target_embedding_layer(token_predictions)
 

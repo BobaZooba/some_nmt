@@ -77,7 +77,7 @@ def get_args() -> Namespace:
     parser.add_argument('--use_attention', action='store_true')
 
     parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--weight_decay', type=float, default=0.)
+    parser.add_argument('--weight_decay', type=float, default=0.01)
 
     parsed_args = parser.parse_args()
 
@@ -115,9 +115,18 @@ if __name__ == '__main__':
 
     model = lightning.LightningSequence2Sequence(hparams=args)
 
+    # checkpoint_callback = pl.callbacks.ModelCheckpoint(
+    #     filepath=os.path.join(os.getcwd(), args.checkpoint_path),
+    #     save_last=True,
+    #     verbose=args.verbose,
+    #     monitor='val_loss',
+    #     mode='min',
+    #     prefix='seq2seq'
+    # )
+    #
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        filepath=os.path.join(os.getcwd(), args.checkpoint_path),
-        save_top_k=1,
+        dirpath=os.path.join(os.getcwd(), args.checkpoint_path),
+        save_last=True,
         verbose=args.verbose,
         monitor='val_loss',
         mode='min',
