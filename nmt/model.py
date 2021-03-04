@@ -148,8 +148,8 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
         :return: logits of your forward pass
         """
 
-        source_lengths = self.sequence_length(source_sequence).cpu()
-        target_lengths = self.sequence_length(target_sequence).cpu()
+        source_lengths = self.sequence_length(source_sequence)
+        target_lengths = self.sequence_length(target_sequence)
 
         # embeddings
         source_emb = self.embedding_dropout(self.source_embedding_layer(source_sequence))
@@ -157,7 +157,7 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
         # encoder
         packed_source_emb = pack_padded_sequence(source_emb,
-                                                 source_lengths,
+                                                 source_lengths.cpu(),
                                                  batch_first=True,
                                                  enforce_sorted=False)
 
@@ -165,7 +165,7 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
         # decoder
         packed_target_emb = pack_padded_sequence(target_emb,
-                                                 target_lengths,
+                                                 target_lengths.cpu(),
                                                  batch_first=True,
                                                  enforce_sorted=False)
 
@@ -201,12 +201,12 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
         with torch.no_grad():
 
-            source_word_embeddings = self.source_embedding_layer(source_text_ids)
-
             source_lengths = self.sequence_length(source_text_ids)
 
+            source_word_embeddings = self.source_embedding_layer(source_text_ids)
+
             packed_source_emb = pack_padded_sequence(source_word_embeddings,
-                                                     source_lengths,
+                                                     source_lengths.cpu(),
                                                      batch_first=True,
                                                      enforce_sorted=False)
 
