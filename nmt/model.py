@@ -187,67 +187,8 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         :return: logits of your forward pass
         """
 
-        source_sequence, source_pad_mask, source_lengths = self.tensor_trimming(source_sequence)
-        target_lengths = self.sequence_length(target_sequence)
+        ...
 
-        # embeddings
-        source_emb = self.embedding_dropout(self.source_embedding_layer(source_sequence))
-        target_emb = self.embedding_dropout(self.target_embedding_layer(target_sequence))
-
-        # encoder
-        packed_source_emb = pack_padded_sequence(source_emb,
-                                                 source_lengths.cpu(),
-                                                 batch_first=True,
-                                                 enforce_sorted=False)
-
-        packed_encoded_sequence, encoder_memory = self.encoder_lstm(packed_source_emb)
-
-        if self.bidirectional_encoder:
-            h_n = encoder_memory[0].view(self.encoder_lstm.num_layers, 2,
-                                         source_sequence.size(0), encoder_memory[0].size(-1))
-
-            c_n = encoder_memory[1].view(self.encoder_lstm.num_layers, 2,
-                                         source_sequence.size(0), encoder_memory[1].size(-1))
-
-            encoder_memory = (h_n[:, 0, :], c_n[:, 0, :])
-
-        encoded_sequence, _ = pad_packed_sequence(packed_encoded_sequence, batch_first=True)
-
-        # decoder
-        packed_target_emb = pack_padded_sequence(target_emb,
-                                                 target_lengths.cpu(),
-                                                 batch_first=True,
-                                                 enforce_sorted=False)
-
-        packed_decoded_sequence, _ = self.decoder_lstm(packed_target_emb, encoder_memory)
-
-        decoded_sequence, _ = pad_packed_sequence(packed_decoded_sequence, batch_first=True)
-
-        # attention
-        query_emb = self.query_projection(decoded_sequence)
-        key_emb = self.key_projection(encoded_sequence)
-        value_emb = self.value_projection(encoded_sequence)
-
-        attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
-
-        attention_scores = attention_scores.masked_fill(
-            ~source_pad_mask.unsqueeze(1),
-            -float('inf'),
-        )
-
-        attention_distribution = torch.softmax(attention_scores, dim=-1)
-
-        attention_distribution = self.attention_dropout(attention_distribution)
-
-        attention_vectors = torch.bmm(attention_distribution, value_emb)
-
-        out_emb = torch.cat((decoded_sequence, attention_vectors), dim=2)
-
-        out_emb = self.attention_projection(out_emb)
-
-        token_prediction = self.token_prediction_head(out_emb)
-
-        return token_prediction
     # YOUR CODE ENDS
 
     # YOUR CODE STARTS
@@ -266,74 +207,6 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         :return: batch of predicted translation, indices
         """
 
-        self.eval()
+        ...
 
-        output_indices = [list() for _ in range(source_text_ids.size(0))]
-
-        with torch.no_grad():
-
-            source_text_ids, source_pad_mask, source_lengths = self.tensor_trimming(source_text_ids)
-
-            source_word_embeddings = self.source_embedding_layer(source_text_ids)
-
-            packed_source_emb = pack_padded_sequence(source_word_embeddings,
-                                                     source_lengths.cpu(),
-                                                     batch_first=True,
-                                                     enforce_sorted=False)
-
-            packed_encoded_sequence, memory = self.encoder_lstm(packed_source_emb)
-
-            if self.bidirectional_encoder:
-                h_n = memory[0].view(self.encoder_lstm.num_layers, 2,
-                                     source_text_ids.size(0), memory[0].size(-1))
-
-                c_n = memory[1].view(self.encoder_lstm.num_layers, 2,
-                                     source_text_ids.size(0), memory[1].size(-1))
-
-                memory = (h_n[:, 0, :], c_n[:, 0, :])
-
-            encoded_sequence, _ = pad_packed_sequence(packed_encoded_sequence, batch_first=True)
-
-            decoder_text_ids = torch.ones(source_text_ids.size(0), 1).long().to(source_word_embeddings.device)
-            decoder_text_ids *= self.bos_index
-
-            decoder_word_embeddings = self.target_embedding_layer(decoder_text_ids)
-
-            for _ in range(self.config.max_length):
-
-                decoded_sequence, memory = self.decoder_lstm(decoder_word_embeddings, memory)
-
-                query_emb = self.query_projection(decoded_sequence)
-                key_emb = self.key_projection(encoded_sequence)
-                value_emb = self.value_projection(encoded_sequence)
-
-                attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
-
-                attention_scores = attention_scores.masked_fill(
-                    ~source_pad_mask.unsqueeze(1),
-                    -float('inf'),
-                )
-
-                attention_distribution = torch.softmax(attention_scores, dim=-1)
-                attention_vectors = torch.bmm(attention_distribution, value_emb)
-
-                out_emb = torch.cat((decoded_sequence, attention_vectors), dim=2)
-
-                out_emb = self.attention_projection(out_emb)
-
-                token_logits = self.token_prediction_head(out_emb)
-                token_predictions = torch.softmax(token_logits, -1).argmax(dim=-1)
-
-                for n_sample in range(token_predictions.size(0)):
-                    token_id = token_predictions[n_sample][0].item()
-                    output_indices[n_sample].append(token_id)
-
-                decoder_word_embeddings = self.target_embedding_layer(token_predictions)
-
-        output_indices = [sample[:sample.index(self.eos_index)]
-                          if self.eos_index in sample
-                          else sample
-                          for sample in output_indices]
-
-        return output_indices
     # YOUR CODE ENDS
