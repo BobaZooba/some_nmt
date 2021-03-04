@@ -68,23 +68,6 @@ class BaseSequence2Sequence(nn.Module, ABC):
         """
         ...
 
-    def tensor_trimming(self, sequence: torch.Tensor) -> (torch.Tensor, torch.Tensor, torch.Tensor):
-        """
-        Trim off excess length for more effective inference of your model
-        :param sequence: batch of text indices, shape = (batch size, sequence length)
-        :return sequence: trimmed sequence, shape = (batch size, sequence length)
-        :return sequence_pad_mask: bool tensor with 1 for text and 0 for pad, shape = (batch size, sequence length)
-        :return sequence_lengths: tensor with lengths of every sample with no pad, shape = (batch size)
-        """
-        sequence_pad_mask = sequence != self.pad_index
-        sequence_lengths = sequence_pad_mask.sum(dim=1).to(sequence.device)
-        sequence_max_length = sequence_lengths.max()
-
-        sequence = sequence[:, :sequence_max_length]
-        sequence_pad_mask = sequence_pad_mask[:, :sequence_max_length].to(sequence.device)
-
-        return sequence, sequence_pad_mask, sequence_lengths
-
     def sequence_length(self, sequence: torch.Tensor) -> torch.Tensor:
         """
         Compute sequence length with no pad
@@ -92,7 +75,7 @@ class BaseSequence2Sequence(nn.Module, ABC):
         :return: tensor with lengths of every sample with no pad, shape = (batch size)
         """
         sequence_pad_mask = sequence != self.pad_index
-        sequence_lengths = sequence_pad_mask.sum(dim=1).int().to(sequence.device)
+        sequence_lengths = sequence_pad_mask.sum(dim=1).to(sequence.device)
 
         return sequence_lengths
 
@@ -165,8 +148,8 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
         :return: logits of your forward pass
         """
 
-        source_lengths = self.sequence_length(source_sequence)
-        target_lengths = self.sequence_length(target_sequence)
+        source_lengths = self.sequence_length(source_sequence).cpu()
+        target_lengths = self.sequence_length(target_sequence).cpu()
 
         # embeddings
         source_emb = self.embedding_dropout(self.source_embedding_layer(source_sequence))
