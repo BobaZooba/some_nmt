@@ -44,10 +44,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
             source_language_tokenizer=source_language_tokenizer,
             target_language_tokenizer=target_language_tokenizer)
 
-        if self.hparams.use_attention:
-            self.model = model.Sequence2SequenceWithAttentionModel(config=self.hparams)
-        else:
-            self.model = model.Sequence2SequenceModel(config=self.hparams)
+        self.model = model.Sequence2SequenceModel(config=self.hparams)
 
         # YOUR CODE STARTS
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.hparams.pad_index)

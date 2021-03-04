@@ -53,14 +53,15 @@ def get_args() -> Namespace:
 
     parser.add_argument('--max_norm', type=float, default=3.)
 
-    parser.add_argument('--epochs', type=int, default=3)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--epochs', type=int, default=5)
+    parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--max_length', type=int, default=32)
 
     parser.add_argument('--n_batch_accumulate', type=int, default=1)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--train_n_pairs', type=int, default=5_000_000)
     parser.add_argument('--valid_n_pairs', type=int, default=25_000)
+    parser.add_argument('--val_check_interval', type=int, default=5_000)
 
     parser.add_argument('--pad_index', type=int, default=0)
     parser.add_argument('--bos_index', type=int, default=1)
@@ -69,12 +70,10 @@ def get_args() -> Namespace:
     parser.add_argument('--vocab_size', type=int, default=30_000)
     parser.add_argument('--embedding_dim', type=int, default=128)
     parser.add_argument('--model_dim', type=int, default=256)
-    parser.add_argument('--encoder_num_layers', type=int, default=2)
-    parser.add_argument('--decoder_num_layers', type=int, default=2)
+    parser.add_argument('--encoder_num_layers', type=int, default=3)
+    parser.add_argument('--decoder_num_layers', type=int, default=3)
     parser.add_argument('--dropout', type=float, default=0.25)
-    parser.add_argument('--attention_dropout', type=float, default=0.1)
     parser.add_argument('--weight_tying', action='store_true')
-    parser.add_argument('--use_attention', action='store_true')
 
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--weight_decay', type=float, default=0.01)
@@ -139,9 +138,9 @@ if __name__ == '__main__':
                          precision=precision,
                          gradient_clip_val=args.max_norm,
                          gpus=args.gpu,
-                         val_check_interval=5000,
+                         val_check_interval=args.val_check_interval,
                          num_sanity_val_steps=0,
-                         progress_bar_refresh_rate=10,
+                         progress_bar_refresh_rate=100,
                          callbacks=[checkpoint_callback],
                          logger=WandbLogger(project=args.project_name))
 

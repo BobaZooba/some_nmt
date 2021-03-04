@@ -60,11 +60,6 @@ class BaseSequence2Sequence(nn.Module, ABC):
         self.eos_index = self.config.eos_index
 
     @abstractmethod
-    def init_weights(self):
-        """Custom weight initializer"""
-        ...
-
-    @abstractmethod
     def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
         """
         Function that generate translation
@@ -149,11 +144,6 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
         if self.config.weight_tying and self.config.embedding_dim == self.config.model_dim:
             self.target_embedding_layer.weight = self.token_prediction_head.weight
-
-        self.init_weights()
-
-    def init_weights(self):
-        ...
 
     # YOUR CODE STARTS
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
