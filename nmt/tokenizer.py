@@ -19,6 +19,7 @@ import torch
 import os
 from tokenizers import Tokenizer
 from tokenizers.models import BPE
+from tokenizers.decoders import BPEDecoder
 from tokenizers.normalizers import Sequence, Lowercase, NFD, StripAccents
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
@@ -43,8 +44,9 @@ def train_tokenizer(train_files: List[str],
     :param vocab_size: size of tokenizer vocabulary
     :return: trained tokenizer
     """
-    tokenizer = Tokenizer(BPE())
+    tokenizer = Tokenizer(BPE(unk_token='[UNK]', end_of_word_suffix='</w>'))
     tokenizer.pre_tokenizer = Whitespace()
+    tokenizer.decoder = BPEDecoder()
 
     if add_bos_eos:
         special_tokens = ['[PAD]', '[BOS]', '[EOS]', '[UNK]']
@@ -55,7 +57,9 @@ def train_tokenizer(train_files: List[str],
     else:
         special_tokens = ['[PAD]', '[UNK]']
 
-    trainer = BpeTrainer(vocab_size=vocab_size, special_tokens=special_tokens)
+    trainer = BpeTrainer(vocab_size=vocab_size,
+                         special_tokens=special_tokens,
+                         end_of_word_suffix='</w>')
 
     tokenizer.train(train_files, trainer)
 
@@ -65,7 +69,7 @@ def train_tokenizer(train_files: List[str],
     tokenizer.normalizer = Sequence([NFD(), Lowercase(), StripAccents()])
 
     model_files = tokenizer.model.save(directory, prefix)
-    tokenizer.model = BPE.from_file(*model_files, unk_token="[UNK]")
+    tokenizer.model = BPE.from_file(*model_files, unk_token='[UNK]', end_of_word_suffix='</w>')
 
     tokenizer.save(save_path, pretty=True)
 

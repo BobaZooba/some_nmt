@@ -256,7 +256,10 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
                 decoder_word_embeddings = self.target_embedding_layer(token_predictions)
 
-        # output_indices = [sample for sample in output_indices]
+        output_indices = [sample[:sample.index(self.eos_index)]
+                          if self.eos_index in sample
+                          else sample
+                          for sample in output_indices]
 
         return output_indices
     # YOUR CODE ENDS
