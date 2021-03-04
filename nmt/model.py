@@ -130,8 +130,6 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         self.value_projection = nn.Linear(in_features=self.config.model_dim * (int(self.bidirectional_encoder) + 1),
                                           out_features=self.config.model_dim)
 
-        self.attention_dropout = nn.Dropout(p=self.config.attention_dropout)
-
         self.attention_projection = nn.Linear(in_features=self.config.model_dim * 2,
                                               out_features=self.config.model_dim)
 
