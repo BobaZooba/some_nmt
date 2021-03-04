@@ -115,15 +115,6 @@ if __name__ == '__main__':
 
     model = lightning.LightningSequence2Sequence(hparams=args)
 
-    # checkpoint_callback = pl.callbacks.ModelCheckpoint(
-    #     filepath=os.path.join(os.getcwd(), args.checkpoint_path),
-    #     save_last=True,
-    #     verbose=args.verbose,
-    #     monitor='val_loss',
-    #     mode='min',
-    #     prefix='seq2seq'
-    # )
-    #
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         dirpath=os.path.join(os.getcwd(), args.checkpoint_path),
         save_last=True,

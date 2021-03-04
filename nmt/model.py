@@ -252,12 +252,11 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
                 for n_sample in range(token_predictions.size(0)):
                     token_id = token_predictions[n_sample][0].item()
-                    if token_id != self.eos_index:
-                        output_indices[n_sample].append(token_id)
-                    else:
-                        continue
+                    output_indices[n_sample].append(token_id)
 
                 decoder_word_embeddings = self.target_embedding_layer(token_predictions)
+
+        # output_indices = [sample for sample in output_indices]
 
         return output_indices
     # YOUR CODE ENDS
