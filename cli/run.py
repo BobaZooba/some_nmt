@@ -75,8 +75,7 @@ if __name__ == '__main__':
         save_last=True,
         verbose=args.verbose,
         monitor='val_loss',
-        mode='min',
-        prefix='seq2seq'
+        mode='min'
     )
 
     trainer = pl.Trainer(max_epochs=args.epochs,

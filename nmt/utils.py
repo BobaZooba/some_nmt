@@ -40,7 +40,7 @@ def get_args() -> Namespace:
 
     parser.add_argument('--n_batch_accumulate', type=int, default=1)
     parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--train_n_pairs', type=int, default=5_000_000)
+    parser.add_argument('--train_n_pairs', type=int, default=10_000_000)
     parser.add_argument('--valid_n_pairs', type=int, default=50_000)
     parser.add_argument('--val_check_interval', type=int, default=5_000)
 
