@@ -48,7 +48,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         self.model = model.Sequence2SequenceModel(config=self.hparams)
 
         # YOUR CODE STARTS
-        self.criterion = nn.CrossEntropyLoss(ignore_index=self.hparams.pad_index)
+        self.criterion = ...
         # YOUR CODE ENDS
 
     def configure_optimizers(self):
@@ -129,10 +129,9 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         :param target_criterion_ids: target texts indices
         :return: loss scalar
         """
-        prediction, target = logits.reshape(-1, logits.size(-1)), target_criterion_ids.contiguous().view(-1)
 
-        loss = self.criterion(prediction, target)
-        return loss
+        ...
+
     # YOUR CODE ENDS
 
     def step(self, batch: (torch.Tensor, torch.Tensor, torch.Tensor)) -> torch.Tensor:

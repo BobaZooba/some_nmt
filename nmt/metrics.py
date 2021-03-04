@@ -39,27 +39,6 @@ def calculate_bleu(lightning_model: LightningSequence2Sequence, config: Namespac
     :return: bleu score of your trained model
     """
 
-    valid_en = load_file(os.path.join(config.directory, 'valid_en.txt'))
-    valid_ru = load_file(os.path.join(config.directory, 'valid_ru.txt'))
+    ...
 
-    generated_texts = list()
-
-    lightning_model.cpu()
-    lightning_model.eval()
-
-    for i_batch in tqdm(range(math.ceil(len(valid_en) / config.batch_size)),
-                        desc='Inference', disable=not config.verbose):
-
-        source_batch = valid_en[i_batch * config.batch_size:(i_batch + 1) * config.batch_size]
-
-        generated_texts_batch = lightning_model.generate(source_texts=source_batch)
-
-        generated_texts.extend(generated_texts_batch)
-
-    tokenized_predicted = [word_tokenize(sample) for sample in generated_texts]
-    tokenized_target = [[word_tokenize(sample)] for sample in valid_ru]
-
-    score = corpus_bleu(tokenized_target, tokenized_predicted)
-
-    return score
 # YOUR CODE ENDS
