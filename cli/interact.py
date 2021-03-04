@@ -46,4 +46,7 @@ if __name__ == '__main__':
 
         if input_source_text != '!q':
             generated = model.generate(source_texts=[input_source_text])
-            logger.info(f'Predicted tags: {generated[0]}')
+            logger.info(f'Generated text: {generated[0]}')
+        else:
+            logger.info('Exit')
+            break
