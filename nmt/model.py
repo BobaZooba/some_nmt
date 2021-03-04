@@ -92,7 +92,7 @@ class BaseSequence2Sequence(nn.Module, ABC):
         :return: tensor with lengths of every sample with no pad, shape = (batch size)
         """
         sequence_pad_mask = sequence != self.pad_index
-        sequence_lengths = sequence_pad_mask.sum(dim=1).to(sequence.device)
+        sequence_lengths = sequence_pad_mask.sum(dim=1).int().to(sequence.device)
 
         return sequence_lengths
 
