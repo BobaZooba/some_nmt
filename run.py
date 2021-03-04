@@ -115,15 +115,6 @@ if __name__ == '__main__':
 
     model = lightning.LightningSequence2Sequence(hparams=args)
 
-    checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        dirpath=os.path.join(os.getcwd(), args.checkpoint_path),
-        save_last=True,
-        verbose=args.verbose,
-        monitor='val_loss',
-        mode='min',
-        prefix='seq2seq'
-    )
-
     try:
         import apex
         use_amp = True
@@ -132,6 +123,15 @@ if __name__ == '__main__':
         use_amp = False
         precision = 32
         logger.info('Train without amp')
+
+    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        dirpath=os.path.join(os.getcwd(), args.checkpoint_path),
+        save_last=True,
+        verbose=args.verbose,
+        monitor='val_loss',
+        mode='min',
+        prefix='seq2seq'
+    )
 
     trainer = pl.Trainer(max_epochs=args.epochs,
                          accumulate_grad_batches=args.n_batch_accumulate,
@@ -142,7 +142,7 @@ if __name__ == '__main__':
                          val_check_interval=args.val_check_interval,
                          num_sanity_val_steps=0,
                          progress_bar_refresh_rate=100,
-                         callbacks=[checkpoint_callback],
+                         checkpoint_callback=checkpoint_callback,
                          logger=WandbLogger(project=args.project_name))
 
     trainer.fit(model)
