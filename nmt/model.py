@@ -268,7 +268,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
         self.eval()
 
-        output_indices = list()
+        output_indices = [list() for _ in range(source_text_ids.size(0))]
 
         with torch.no_grad():
 
