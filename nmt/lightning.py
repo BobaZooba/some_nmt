@@ -166,8 +166,10 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         #     'train_loss': loss.item(),
         #     'train_perplexity': np.exp(loss.item())
         # }
-        self.log(name='train_loss', value=loss.item(), prog_bar=True, on_step=True, on_epoch=False)
-        self.log(name='train_perplexity', value=np.exp(loss.item()), prog_bar=True, on_step=True, on_epoch=False)
+        self.log(name='train_loss', value=loss.item(),
+                 prog_bar=False, on_step=True, on_epoch=False)
+        self.log(name='train_perplexity', value=np.exp(loss.item()),
+                 prog_bar=False, on_step=True, on_epoch=False)
 
         return {'loss': loss}
 
@@ -194,9 +196,9 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         epoch_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
 
         self.log(name='val_loss', value=epoch_loss.item(),
-                 prog_bar=True, on_step=False, on_epoch=True)
+                 prog_bar=False, on_step=False, on_epoch=True)
         self.log(name='val_perplexity', value=np.exp(epoch_loss.item()),
-                 prog_bar=True, on_step=False, on_epoch=True)
+                 prog_bar=False, on_step=False, on_epoch=True)
 
         return {'val_loss': epoch_loss}
 
