@@ -87,7 +87,6 @@ if __name__ == '__main__':
                          gpus=args.gpu,
                          val_check_interval=args.val_check_interval,
                          num_sanity_val_steps=0,
-                         progress_bar_refresh_rate=100,
                          callbacks=[checkpoint_callback],
                          logger=WandbLogger(project=args.project_name))
 
