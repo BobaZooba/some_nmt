@@ -17,6 +17,7 @@ import logging
 import os
 import sys
 
+import nltk
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.loggers import WandbLogger
@@ -33,6 +34,8 @@ if __name__ == '__main__':
         level=logging.INFO,
         stream=sys.stdout,
     )
+
+    nltk.download('punkt')
 
     logger = logging.getLogger(os.path.basename(__file__))
 
