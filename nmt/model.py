@@ -244,8 +244,8 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
         with torch.no_grad():
 
-            question_emb = self.source_embedding_layer(source_text_ids)
-            encoded_sequence, encoder_mem = self.encoder_lstm(question_emb)
+            source_word_embeddings = self.source_embedding_layer(source_text_ids)
+            encoded_sequence, encoder_mem = self.encoder_lstm(source_word_embeddings)
 
             if self.bidirectional_encoder:
                 h_n = encoder_mem[0].view(self.encoder_lstm.num_layers, 2,
@@ -256,9 +256,14 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
                 mem = (h_n[:, 0, :].contiguous(), c_n[:, 0, :].contiguous())
 
+            decoder_text_ids = torch.ones(source_text_ids.size(0), 1).long().to(source_word_embeddings.device)
+            decoder_text_ids *= self.bos_index
+
+            decoder_word_embeddings = self.target_embedding_layer(decoder_text_ids)
+
             for _ in range(self.config.max_length):
 
-                decoded_sequence, mem = self.decoder_lstm(target_emb, mem)
+                decoded_sequence, mem = self.decoder_lstm(decoder_word_embeddings, mem)
 
                 query_emb = self.query_projection(decoded_sequence)
                 key_emb = self.key_projection(encoded_sequence)
@@ -279,7 +284,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                     token_id = token_predictions[n_sample][0].item()
                     output_indices[n_sample].append(token_id)
 
-                target_emb = self.target_embedding_layer(token_predictions)
+                decoder_word_embeddings = self.target_embedding_layer(token_predictions)
 
         output_indices = [sample[:sample.index(self.eos_index)]
                           if self.eos_index in sample

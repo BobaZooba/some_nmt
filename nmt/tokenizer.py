@@ -178,7 +178,8 @@ class Sequence2SequencePreparer:
         target_texts_ids: List[List[int]] = list()
 
         for sample_index in range(len(batch)):
-            if sum(tokenized_source_texts[sample_index].ids) > 0 and sum(tokenized_target_texts[sample_index].ids) > 0:
+            if sum(tokenized_source_texts[sample_index].ids) > 0 \
+                    and sum(tokenized_target_texts[sample_index].ids) > 0:
                 source_texts_ids.append(tokenized_source_texts[sample_index].ids)
                 target_texts_ids.append(tokenized_target_texts[sample_index].ids)
 
