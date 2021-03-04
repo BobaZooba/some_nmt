@@ -200,16 +200,16 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                                                  batch_first=True,
                                                  enforce_sorted=False)
 
-        packed_encoded_sequence, encoder_mem = self.encoder_lstm(packed_source_emb)
+        packed_encoded_sequence, encoder_memory = self.encoder_lstm(packed_source_emb)
 
         if self.bidirectional_encoder:
-            h_n = encoder_mem[0].view(self.encoder_lstm.num_layers, 2,
-                                      source_sequence.size(0), encoder_mem[0].size(-1))
+            h_n = encoder_memory[0].view(self.encoder_lstm.num_layers, 2,
+                                         source_sequence.size(0), encoder_memory[0].size(-1))
 
-            c_n = encoder_mem[1].view(self.encoder_lstm.num_layers, 2,
-                                      source_sequence.size(0), encoder_mem[1].size(-1))
+            c_n = encoder_memory[1].view(self.encoder_lstm.num_layers, 2,
+                                         source_sequence.size(0), encoder_memory[1].size(-1))
 
-            encoder_mem = (h_n[:, 0, :], c_n[:, 0, :])
+            encoder_memory = (h_n[:, 0, :], c_n[:, 0, :])
 
         encoded_sequence, _ = pad_packed_sequence(packed_encoded_sequence, batch_first=True)
 
@@ -219,7 +219,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                                                  batch_first=True,
                                                  enforce_sorted=False)
 
-        packed_decoded_sequence, _ = self.decoder_lstm(packed_target_emb, encoder_mem)
+        packed_decoded_sequence, _ = self.decoder_lstm(packed_target_emb, encoder_memory)
 
         decoded_sequence, _ = pad_packed_sequence(packed_decoded_sequence, batch_first=True)
 
@@ -231,7 +231,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
 
         attention_scores = attention_scores.masked_fill(
-            source_pad_mask,
+            ~source_pad_mask.unsqueeze(1),
             -float('inf'),
         )
 
@@ -281,16 +281,16 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                                                      batch_first=True,
                                                      enforce_sorted=False)
 
-            packed_encoded_sequence, mem = self.encoder_lstm(packed_source_emb)
+            packed_encoded_sequence, memory = self.encoder_lstm(packed_source_emb)
 
             if self.bidirectional_encoder:
-                h_n = mem[0].view(self.encoder_lstm.num_layers, 2,
-                                  source_text_ids.size(0), mem[0].size(-1))
+                h_n = memory[0].view(self.encoder_lstm.num_layers, 2,
+                                     source_text_ids.size(0), memory[0].size(-1))
 
-                c_n = mem[1].view(self.encoder_lstm.num_layers, 2,
-                                  source_text_ids.size(0), mem[1].size(-1))
+                c_n = memory[1].view(self.encoder_lstm.num_layers, 2,
+                                     source_text_ids.size(0), memory[1].size(-1))
 
-                mem = (h_n[:, 0, :], c_n[:, 0, :])
+                memory = (h_n[:, 0, :], c_n[:, 0, :])
 
             encoded_sequence, _ = pad_packed_sequence(packed_encoded_sequence, batch_first=True)
 
@@ -301,7 +301,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
             for _ in range(self.config.max_length):
 
-                decoded_sequence, mem = self.decoder_lstm(decoder_word_embeddings, mem)
+                decoded_sequence, memory = self.decoder_lstm(decoder_word_embeddings, memory)
 
                 query_emb = self.query_projection(decoded_sequence)
                 key_emb = self.key_projection(encoded_sequence)
@@ -310,7 +310,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                 attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
 
                 attention_scores = attention_scores.masked_fill(
-                    source_pad_mask,
+                    ~source_pad_mask.unsqueeze(1),
                     -float('inf'),
                 )
 
