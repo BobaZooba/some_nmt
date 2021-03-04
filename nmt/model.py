@@ -90,7 +90,7 @@ class BaseSequence2Sequence(nn.Module, ABC):
         ...
 
 
-class Sequence2SequenceModel(BaseSequence2Sequence):
+class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
     def __init__(self, config: Namespace):
         """
@@ -98,6 +98,8 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
         :param config: hyper parameters of your experiment
         """
         super().__init__(config=config)
+
+        self.bidirectional_encoder = self.config.bidirectional_encoder
 
         self.source_embedding_layer = nn.Embedding(num_embeddings=self.config.vocab_size,
                                                    embedding_dim=self.config.embedding_dim,
@@ -113,13 +115,25 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
                                     hidden_size=self.config.model_dim,
                                     num_layers=self.config.encoder_num_layers,
                                     dropout=self.config.dropout,
-                                    batch_first=True)
+                                    batch_first=True,
+                                    bidirectional=self.bidirectional_encoder)
 
         self.decoder_lstm = nn.LSTM(input_size=self.config.embedding_dim,
                                     hidden_size=self.config.model_dim,
                                     num_layers=self.config.decoder_num_layers,
                                     dropout=self.config.dropout,
                                     batch_first=True)
+
+        self.query_projection = nn.Linear(in_features=self.config.model_dim, out_features=self.config.model_dim)
+        self.key_projection = nn.Linear(in_features=self.config.model_dim * (int(self.bidirectional_encoder) + 1),
+                                        out_features=self.config.model_dim)
+        self.value_projection = nn.Linear(in_features=self.config.model_dim * (int(self.bidirectional_encoder) + 1),
+                                          out_features=self.config.model_dim)
+
+        self.attention_dropout = nn.Dropout(p=self.config.attention_dropout)
+
+        self.attention_projection = nn.Linear(in_features=self.config.model_dim * 2,
+                                              out_features=self.config.model_dim)
 
         self.token_prediction_head = torch.nn.Linear(in_features=self.config.model_dim,
                                                      out_features=self.config.vocab_size,
@@ -138,17 +152,25 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
         3. Apply dropout
         4. Pack source text using pack_padded_sequence
         5. Apply encoder lstm for packed source texts
+            5.1* If you using bidirectional encoder reshape memory and get forward pass to put it into decoder
         6. Unpack lstm results with pad_packed_sequence
         7. Pack target text using pack_padded_sequence
         8. Apply decoder lstm for packed target texts and using encoder lstm memory
         9. Unpack lstm results with pad_packed_sequence
-        10. Predict the words of target texts
+        10. Compute the attention
+            10.1. Compute attention scores between decoder and encoder lstm hiddens
+            10.2. Compute attention distribution using softmax
+            10.3. Compute attention vectors using attention distribution and decoder lstm hiddens
+            10.4. Aggregate attention vectors with decoder lstm hiddens
+            10.5.* You also can use some of linear projections for decoder and encoder hiddens
+            10.6.* You can use linear projection for attention vectors
+        11. Predict the words of target texts
         :param source_sequence: batch of source texts indices
         :param target_sequence: batch of target texts indices
         :return: logits of your forward pass
         """
 
-        source_lengths = self.sequence_length(source_sequence).cpu()
+        source_lengths = self.sequence_length(target_sequence).cpu()
         target_lengths = self.sequence_length(target_sequence).cpu()
 
         # embeddings
@@ -161,7 +183,18 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
                                                  batch_first=True,
                                                  enforce_sorted=False)
 
-        _, encoder_mem = self.encoder_lstm(packed_source_emb)
+        packed_encoded_sequence, encoder_mem = self.encoder_lstm(packed_source_emb)
+
+        if self.bidirectional_encoder:
+            h_n = encoder_mem[0].view(self.encoder_lstm.num_layers, 2,
+                                      source_sequence.size(0), encoder_mem[0].size(-1))
+
+            c_n = encoder_mem[1].view(self.encoder_lstm.num_layers, 2,
+                                      source_sequence.size(0), encoder_mem[1].size(-1))
+
+            encoder_mem = (h_n[:, 0, :], c_n[:, 0, :])
+
+        encoded_sequence, _ = pad_packed_sequence(packed_encoded_sequence, batch_first=True)
 
         # decoder
         packed_target_emb = pack_padded_sequence(target_emb,
@@ -173,7 +206,20 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
 
         decoded_sequence, _ = pad_packed_sequence(packed_decoded_sequence, batch_first=True)
 
-        token_prediction = self.token_prediction_head(decoded_sequence)
+        # attention
+        query_emb = self.query_projection(decoded_sequence)
+        key_emb = self.key_projection(encoded_sequence)
+        value_emb = self.value_projection(encoded_sequence)
+
+        attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
+        attention_distribution = torch.softmax(attention_scores, dim=-1)
+        attention_vectors = torch.bmm(attention_distribution, value_emb)
+
+        out_emb = torch.cat((decoded_sequence, attention_vectors), dim=2)
+
+        out_emb = self.attention_projection(out_emb)
+
+        token_prediction = self.token_prediction_head(out_emb)
 
         return token_prediction
     # YOUR CODE ENDS
@@ -181,55 +227,61 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
     # YOUR CODE STARTS
     def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
         """
-        Function that generate translation. This function should work with batches
+        Function that generate translation
         STEPS:
         1. Turn model to evaluation mode
         2. Apply encoder things (use code from forward step)
         3. Use loop to predict every token of translation, dont forget about <BOS> token
             3.1. You need update your memory at each step
             3.2. Use updated memory to inference for new step
+            3.3. Apply attention from current decoder step to every encoder hiddens
         4. Save results to list
-            4.1. Don't forget about EOS index. You can stop generation when you see that token or delete them latter
-            4.2. Don't forget that you don't need any generated tokens after the EOS token
         :param source_text_ids: batch of source texts indices
         :return: batch of predicted translation, indices
         """
 
         self.eval()
 
-        output_indices = [list() for _ in range(source_text_ids.size(0))]
+        output_indices = list()
 
         with torch.no_grad():
 
-            source_word_embeddings = self.source_embedding_layer(source_text_ids)
+            question_emb = self.source_embedding_layer(source_text_ids)
+            encoded_sequence, encoder_mem = self.encoder_lstm(question_emb)
 
-            source_lengths = self.sequence_length(source_text_ids)
+            if self.bidirectional_encoder:
+                h_n = encoder_mem[0].view(self.encoder_lstm.num_layers, 2,
+                                          source_text_ids.size(0), encoder_mem[0].size(-1))
 
-            packed_source_emb = pack_padded_sequence(source_word_embeddings,
-                                                     source_lengths,
-                                                     batch_first=True,
-                                                     enforce_sorted=False)
+                c_n = encoder_mem[1].view(self.encoder_lstm.num_layers, 2,
+                                          source_text_ids.size(0), encoder_mem[1].size(-1))
 
-            _, memory = self.encoder_lstm(packed_source_emb)
-
-            decoder_text_ids = torch.ones(source_text_ids.size(0), 1).long().to(source_word_embeddings.device)
-            decoder_text_ids *= self.bos_index
-
-            decoder_word_embeddings = self.target_embedding_layer(decoder_text_ids)
+                mem = (h_n[:, 0, :].contiguous(), c_n[:, 0, :].contiguous())
 
             for _ in range(self.config.max_length):
 
-                decoder_hiddens, memory = self.decoder_lstm(decoder_word_embeddings, memory)
+                decoded_sequence, mem = self.decoder_lstm(target_emb, mem)
 
-                token_logits = self.token_prediction_head(decoder_hiddens)
+                query_emb = self.query_projection(decoded_sequence)
+                key_emb = self.key_projection(encoded_sequence)
+                value_emb = self.value_projection(encoded_sequence)
 
+                attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
+                attention_distribution = torch.softmax(attention_scores, dim=-1)
+                attention_vectors = torch.bmm(attention_distribution, value_emb)
+
+                out_emb = torch.cat((decoded_sequence, attention_vectors), dim=2)
+
+                out_emb = self.attention_projection(out_emb)
+
+                token_logits = self.token_prediction_head(out_emb)
                 token_predictions = torch.softmax(token_logits, -1).argmax(dim=-1)
 
                 for n_sample in range(token_predictions.size(0)):
                     token_id = token_predictions[n_sample][0].item()
                     output_indices[n_sample].append(token_id)
 
-                decoder_word_embeddings = self.target_embedding_layer(token_predictions)
+                target_emb = self.target_embedding_layer(token_predictions)
 
         output_indices = [sample[:sample.index(self.eos_index)]
                           if self.eos_index in sample
