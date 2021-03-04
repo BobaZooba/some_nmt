@@ -196,8 +196,6 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         self.log(name='val_perplexity', value=np.exp(epoch_loss.item()),
                  prog_bar=False, on_step=False, on_epoch=True)
 
-        return {'val_loss': epoch_loss}
-
     def generate(self, source_texts: List[str]) -> List[str]:
         """
         Translate from source texts (english) to target language (russian)
