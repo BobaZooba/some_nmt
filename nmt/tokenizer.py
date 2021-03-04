@@ -13,13 +13,13 @@
 # limitations under the License.
 # =============================================================================
 
+import os
 from typing import List, Tuple
 
 import torch
-import os
 from tokenizers import Tokenizer
-from tokenizers.models import BPE
 from tokenizers.decoders import BPEDecoder
+from tokenizers.models import BPE
 from tokenizers.normalizers import Sequence, Lowercase, NFD, StripAccents
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing

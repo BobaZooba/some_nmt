@@ -13,6 +13,7 @@
 # limitations under the License.
 # =============================================================================
 
+import logging
 import os
 import random
 import zipfile
@@ -20,7 +21,6 @@ import zipfile
 import requests
 from tokenizers.normalizers import Sequence, Lowercase, NFD, StripAccents
 from tqdm import tqdm
-import logging
 
 EN_RU_OPEN_SUBTITLES_URL: str = 'http://opus.nlpl.eu/download.php?f=OpenSubtitles/v2018/moses/en-ru.txt.zip'
 EN_OPEN_SUBTITLES_FILE: str = 'OpenSubtitles.en-ru.en'

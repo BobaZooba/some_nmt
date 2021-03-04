@@ -15,15 +15,16 @@
 
 import os
 from abc import ABC
+from argparse import Namespace
+from typing import List, Dict
 
 import numpy as np
 import pytorch_lightning as pl
 import torch
 from torch import nn
-from typing import List, Dict
-from argparse import Namespace
-from nmt import data, model, tokenizer
 from torch.utils.data import DataLoader
+
+from nmt import data, model, tokenizer
 
 
 class LightningSequence2Sequence(pl.LightningModule, ABC):
@@ -161,12 +162,14 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         loss = self.step(batch=batch)
 
-        log = {
-            'train_loss': loss.item(),
-            'train_perplexity': np.exp(loss.item())
-        }
+        # log = {
+        #     'train_loss': loss.item(),
+        #     'train_perplexity': np.exp(loss.item())
+        # }
+        self.log(name='train_loss', value=loss.item(), prog_bar=True, on_step=True, on_epoch=False)
+        self.log(name='train_perplexity', value=np.exp(loss.item()), prog_bar=True, on_step=True, on_epoch=False)
 
-        return {'loss': loss, 'log': log}
+        return {'loss': loss}
 
     def validation_step(self,
                         batch: (torch.Tensor, torch.Tensor, torch.Tensor),
@@ -188,11 +191,25 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         :param outputs: outputs of every validation step
         :return: Dict with info of all validation
         """
-        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        epoch_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
 
-        log = {
-            'val_loss': avg_loss,
-            'val_perplexity': np.exp(avg_loss.item())
-        }
+        self.log(name='val_loss', value=epoch_loss.item(),
+                 prog_bar=True, on_step=False, on_epoch=True)
+        self.log(name='val_perplexity', value=np.exp(epoch_loss.item()),
+                 prog_bar=True, on_step=False, on_epoch=True)
 
-        return {'val_loss': avg_loss, 'log': log}
+        return {'val_loss': epoch_loss}
+
+    def generate(self, source_texts: List[str]) -> List[str]:
+        """
+        Translate from source texts (english) to target language (russian)
+        :param source_texts: list of english texts
+        :return: list of translated texts
+        """
+
+        tokenized = self.sequence2sequence_preparer.source_tokenize(source_texts)
+        generated_indices = self.model.generate(tokenized)
+        generated_texts = self.sequence2sequence_preparer.target_language_tokenizer.decode_batch(
+            generated_indices)
+
+        return generated_texts
