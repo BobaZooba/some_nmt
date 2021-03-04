@@ -77,11 +77,11 @@ class BaseSequence2Sequence(nn.Module, ABC):
         :return sequence_lengths: tensor with lengths of every sample with no pad, shape = (batch size)
         """
         sequence_pad_mask = sequence != self.pad_index
-        sequence_lengths = sequence_pad_mask.sum(dim=1)
+        sequence_lengths = sequence_pad_mask.sum(dim=1).to(sequence.device)
         sequence_max_length = sequence_lengths.max()
 
         sequence = sequence[:, :sequence_max_length]
-        sequence_pad_mask = sequence_pad_mask[:, :sequence_max_length]
+        sequence_pad_mask = sequence_pad_mask[:, :sequence_max_length].to(sequence.device)
 
         return sequence, sequence_pad_mask, sequence_lengths
 
@@ -92,7 +92,7 @@ class BaseSequence2Sequence(nn.Module, ABC):
         :return: tensor with lengths of every sample with no pad, shape = (batch size)
         """
         sequence_pad_mask = sequence != self.pad_index
-        sequence_lengths = sequence_pad_mask.sum(dim=1)
+        sequence_lengths = sequence_pad_mask.sum(dim=1).to(sequence.device)
 
         return sequence_lengths
 
@@ -198,7 +198,7 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
     # YOUR CODE STARTS
     def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
         """
-        Function that generate translation
+        Function that generate translation. This function should work with batches
         STEPS:
         1. Turn model to evaluation mode
         2. Apply encoder things (use code from forward step)
@@ -206,6 +206,8 @@ class Sequence2SequenceModel(BaseSequence2Sequence):
             3.1. You need update your memory at each step
             3.2. Use updated memory to inference for new step
         4. Save results to list
+            4.1. Don't forget about EOS index. You can stop generation when you see that token or delete them latter
+            4.2. Don't forget that you don't need any generated tokens after the EOS token
         :param source_text_ids: batch of source texts indices
         :return: batch of predicted translation, indices
         """

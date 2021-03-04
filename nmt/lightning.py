@@ -162,10 +162,6 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         loss = self.step(batch=batch)
 
-        # log = {
-        #     'train_loss': loss.item(),
-        #     'train_perplexity': np.exp(loss.item())
-        # }
         self.log(name='train_loss', value=loss.item(),
                  prog_bar=False, on_step=True, on_epoch=False)
         self.log(name='train_perplexity', value=np.exp(loss.item()),
