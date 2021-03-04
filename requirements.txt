@@ -2,3 +2,4 @@ torch==1.7.1
 pytorch-lightning==1.2.1
 tokenizers==0.10.1
 wandb==0.10.21
+nltk==3.5
