@@ -42,7 +42,8 @@ def get_args() -> Namespace:
     parser = ArgumentParser(add_help=False)
 
     parser.add_argument('--directory', type=str, default='./data/')
-    parser.add_argument('--checkpoint_path', type=str, default='./data/checkpoints/checkpoint')
+    parser.add_argument('--checkpoint_path', type=str, default='./data/checkpoints/')
+    parser.add_argument('--state_dict_path', type=str, default='./data/last_state_dict.pt')
     parser.add_argument('--project_name', type=str, default='NMT')
 
     parser.add_argument('--verbose', action='store_true')
@@ -53,7 +54,7 @@ def get_args() -> Namespace:
 
     parser.add_argument('--max_norm', type=float, default=3.)
 
-    parser.add_argument('--epochs', type=int, default=5)
+    parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--max_length', type=int, default=32)
 
@@ -145,6 +146,8 @@ if __name__ == '__main__':
                          logger=WandbLogger(project=args.project_name))
 
     trainer.fit(model)
+
+    torch.save(model.state_dict(), args.state_dict_path)
 
     bleu_score = metrics.calculate_bleu(lightning_model=model, config=args)
 
