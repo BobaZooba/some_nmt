@@ -68,6 +68,23 @@ class BaseSequence2Sequence(nn.Module, ABC):
         """
         ...
 
+    def tensor_trimming(self, sequence: torch.Tensor) -> (torch.Tensor, torch.Tensor, torch.Tensor):
+        """
+        Trim off excess length for more effective inference of your model
+        :param sequence: batch of text indices, shape = (batch size, sequence length)
+        :return sequence: trimmed sequence, shape = (batch size, sequence length)
+        :return sequence_pad_mask: bool tensor with 1 for text and 0 for pad, shape = (batch size, sequence length)
+        :return sequence_lengths: tensor with lengths of every sample with no pad, shape = (batch size)
+        """
+        sequence_pad_mask = sequence != self.pad_index
+        sequence_lengths = sequence_pad_mask.sum(dim=1).to(sequence.device)
+        sequence_max_length = sequence_lengths.max()
+
+        sequence = sequence[:, :sequence_max_length]
+        sequence_pad_mask = sequence_pad_mask[:, :sequence_max_length].to(sequence.device)
+
+        return sequence, sequence_pad_mask, sequence_lengths
+
     def sequence_length(self, sequence: torch.Tensor) -> torch.Tensor:
         """
         Compute sequence length with no pad
@@ -124,6 +141,8 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                                     dropout=self.config.dropout,
                                     batch_first=True)
 
+        self.attention_dropout = nn.Dropout(p=self.config.attention_dropout)
+
         self.query_projection = nn.Linear(in_features=self.config.model_dim, out_features=self.config.model_dim)
         self.key_projection = nn.Linear(in_features=self.config.model_dim * (int(self.bidirectional_encoder) + 1),
                                         out_features=self.config.model_dim)
@@ -168,8 +187,8 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         :return: logits of your forward pass
         """
 
-        source_lengths = self.sequence_length(target_sequence).cpu()
-        target_lengths = self.sequence_length(target_sequence).cpu()
+        source_sequence, source_pad_mask, source_lengths = self.tensor_trimming(source_sequence)
+        target_lengths = self.sequence_length(target_sequence)
 
         # embeddings
         source_emb = self.embedding_dropout(self.source_embedding_layer(source_sequence))
@@ -177,7 +196,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
         # encoder
         packed_source_emb = pack_padded_sequence(source_emb,
-                                                 source_lengths,
+                                                 source_lengths.cpu(),
                                                  batch_first=True,
                                                  enforce_sorted=False)
 
@@ -196,7 +215,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
         # decoder
         packed_target_emb = pack_padded_sequence(target_emb,
-                                                 target_lengths,
+                                                 target_lengths.cpu(),
                                                  batch_first=True,
                                                  enforce_sorted=False)
 
@@ -210,7 +229,16 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         value_emb = self.value_projection(encoded_sequence)
 
         attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
+
+        attention_scores = attention_scores.masked_fill(
+            source_pad_mask,
+            -float('inf'),
+        )
+
         attention_distribution = torch.softmax(attention_scores, dim=-1)
+
+        attention_distribution = self.attention_dropout(attention_distribution)
+
         attention_vectors = torch.bmm(attention_distribution, value_emb)
 
         out_emb = torch.cat((decoded_sequence, attention_vectors), dim=2)
@@ -244,17 +272,27 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
         with torch.no_grad():
 
+            source_text_ids, source_pad_mask, source_lengths = self.tensor_trimming(source_text_ids)
+
             source_word_embeddings = self.source_embedding_layer(source_text_ids)
-            encoded_sequence, encoder_mem = self.encoder_lstm(source_word_embeddings)
+
+            packed_source_emb = pack_padded_sequence(source_word_embeddings,
+                                                     source_lengths.cpu(),
+                                                     batch_first=True,
+                                                     enforce_sorted=False)
+
+            packed_encoded_sequence, mem = self.encoder_lstm(packed_source_emb)
 
             if self.bidirectional_encoder:
-                h_n = encoder_mem[0].view(self.encoder_lstm.num_layers, 2,
-                                          source_text_ids.size(0), encoder_mem[0].size(-1))
+                h_n = mem[0].view(self.encoder_lstm.num_layers, 2,
+                                  source_text_ids.size(0), mem[0].size(-1))
 
-                c_n = encoder_mem[1].view(self.encoder_lstm.num_layers, 2,
-                                          source_text_ids.size(0), encoder_mem[1].size(-1))
+                c_n = mem[1].view(self.encoder_lstm.num_layers, 2,
+                                  source_text_ids.size(0), mem[1].size(-1))
 
-                mem = (h_n[:, 0, :].contiguous(), c_n[:, 0, :].contiguous())
+                mem = (h_n[:, 0, :], c_n[:, 0, :])
+
+            encoded_sequence, _ = pad_packed_sequence(packed_encoded_sequence, batch_first=True)
 
             decoder_text_ids = torch.ones(source_text_ids.size(0), 1).long().to(source_word_embeddings.device)
             decoder_text_ids *= self.bos_index
@@ -270,6 +308,12 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                 value_emb = self.value_projection(encoded_sequence)
 
                 attention_scores = torch.bmm(query_emb, key_emb.transpose(1, 2))
+
+                attention_scores = attention_scores.masked_fill(
+                    source_pad_mask,
+                    -float('inf'),
+                )
+
                 attention_distribution = torch.softmax(attention_scores, dim=-1)
                 attention_vectors = torch.bmm(attention_distribution, value_emb)
 

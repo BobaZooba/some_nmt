@@ -56,6 +56,7 @@ def get_args() -> Namespace:
     parser.add_argument('--dropout', type=float, default=0.25)
     parser.add_argument('--weight_tying', action='store_true')
     parser.add_argument('--bidirectional_encoder', action='store_true')
+    parser.add_argument('--attention_dropout', type=float, default=0.1)
 
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--weight_decay', type=float, default=0.01)

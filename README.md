@@ -47,7 +47,8 @@ pip install -e .
 и выходной матрицы для предсказания слов
 - learning_rate — величина learning rate для оптимизатора  
 - weight_decay — величина weight decay для оптимизатора
-- bidirectional_encoder - флаг, при указании которого используется двунаправленная rnn в энкодере
+- bidirectional_encoder - флаг, при указании которого используется двунаправленная RNN в энкодере
+- attention_dropout - вероятность дропаута для Attention
 
 ## Первый запуск
 При первом запуске нужно указать флаги ```load_data``` и ```train_tokenizers```, чтобы загрузить данные
