@@ -63,10 +63,11 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         return optimizer
 
-    def get_dataloader(self, data_type: str) -> DataLoader:
+    def get_dataloader(self, data_type: str, shuffle: bool = False) -> DataLoader:
         """
         Load data loader for training or validation
         :param data_type: setup training or validation
+        :param shuffle: shuffle data at each epoch
         :return: DataLoader object
         """
 
@@ -81,7 +82,8 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         loader = DataLoader(
             dataset,
             batch_size=self.hparams.batch_size,
-            collate_fn=self.sequence2sequence_preparer.collate
+            collate_fn=self.sequence2sequence_preparer.collate,
+            shuffle=shuffle
         )
 
         return loader
@@ -91,7 +93,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         Load train data loader
         :return: DataLoader object
         """
-        loader = self.get_dataloader(data_type='train')
+        loader = self.get_dataloader(data_type='train', shuffle=True)
 
         return loader
 
@@ -100,7 +102,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         Load validation data loader
         :return: DataLoader object
         """
-        loader = self.get_dataloader(data_type='valid')
+        loader = self.get_dataloader(data_type='valid', shuffle=False)
 
         return loader
 
