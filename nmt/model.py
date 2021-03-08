@@ -21,29 +21,7 @@ import torch
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-
-class SpatialDropout(nn.Dropout2d):
-
-    def __init__(self, p=0.5):
-        """
-        Apply special dropout that work cool for rnn models
-        :param p: probability of dropout
-        """
-        super().__init__()
-        self.p = p
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Perform the dropout
-        :param x: tensor with word vectors, shape = (batch size, sequence length, vector dim)
-        :return: tensor after dropout
-        """
-        x = x.unsqueeze(2)
-        x = x.permute(0, 3, 2, 1)
-        x = super(SpatialDropout, self).forward(x)
-        x = x.permute(0, 3, 2, 1)
-        x = x.squeeze(2)
-        return x
+from nmt import layers
 
 
 class BaseSequence2Sequence(nn.Module, ABC):
@@ -126,7 +104,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
                                                    embedding_dim=self.config.embedding_dim,
                                                    padding_idx=self.pad_index)
 
-        self.embedding_dropout = SpatialDropout(p=self.config.dropout)
+        self.embedding_dropout = layers.SpatialDropout(p=self.config.dropout)
 
         self.encoder_lstm = nn.LSTM(input_size=self.config.embedding_dim,
                                     hidden_size=self.config.model_dim,
@@ -337,3 +315,108 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
         return output_indices
     # YOUR CODE ENDS
+
+
+class Transformer(BaseSequence2Sequence):
+
+    def __init__(self, config: Namespace):
+        super().__init__(config=config)
+
+        self.source_embedding_layer = layers.TransformerEmbedding(embedding_dim=self.config.model_dim,
+                                                                  vocab_size=self.config.vocab_size,
+                                                                  n_positions=self.config.max_length,
+                                                                  token_embedding_dim=self.config.embedding_dim,
+                                                                  dropout=self.config.embedding_dropout,
+                                                                  use_spatial_dropout=False,
+                                                                  padding_idx=self.pad_index,
+                                                                  zeroing_pad=True)
+
+        self.source_embedding_input_cnn = layers.CausalCNN(model_dim=self.config.model_dim,
+                                                           kernel_size=self.config.input_cnn_kernel_size,
+                                                           dropout=self.config.embedding_dropout,
+                                                           activation=self.config.activation)
+
+        self.target_embedding_layer = layers.TransformerEmbedding(embedding_dim=self.config.model_dim,
+                                                                  vocab_size=self.config.vocab_size,
+                                                                  n_positions=self.config.max_length,
+                                                                  token_embedding_dim=self.config.embedding_dim,
+                                                                  dropout=self.config.embedding_dropout,
+                                                                  use_spatial_dropout=False,
+                                                                  padding_idx=self.pad_index,
+                                                                  zeroing_pad=True)
+
+        self.target_embedding_input_cnn = layers.CausalCNN(model_dim=self.config.model_dim,
+                                                           kernel_size=self.config.input_cnn_kernel_size,
+                                                           dropout=self.config.embedding_dropout,
+                                                           activation=self.config.activation)
+
+        self.encoder_layers = nn.ModuleList([
+            layers.TransformerEncoderLayer(model_dim=self.config.model_dim,
+                                           num_heads=self.config.num_heads,
+                                           feed_forward_dim=self.config.feed_forward_dim,
+                                           head_dim=self.config.head_dim,
+                                           dropout=self.config.transformer_dropout,
+                                           activation=self.config.activation,
+                                           use_fusion_gate=self.config.use_fusion_gate)
+            for _ in range(self.config.encoder_n_layers)])
+
+        self.decoder_layers = nn.ModuleList([
+            layers.TransformerDecoderLayer(model_dim=self.config.model_dim,
+                                           num_heads=self.config.num_heads,
+                                           feed_forward_dim=self.config.feed_forward_dim,
+                                           head_dim=self.config.head_dim,
+                                           dropout=self.config.transformer_dropout,
+                                           activation=self.config.activation,
+                                           use_fusion_gate=self.config.use_fusion_gate)
+            for _ in range(self.config.decoder_n_layers)])
+
+        self.token_prediction_head = torch.nn.Linear(in_features=self.config.model_dim,
+                                                     out_features=self.config.vocab_size,
+                                                     bias=False)
+
+        if self.config.weight_tying and not self.target_embedding_layer.is_factorized:
+            self.token_prediction_head.weight = self.target_embedding_layer.token_embedding.weight
+
+    def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
+
+        source_sequence, source_pad_mask, _ = self.tensor_trimming(source_sequence)
+        target_sequence, target_pad_mask, _ = self.tensor_trimming(target_sequence)
+
+        # embeddings
+        source_sequence = self.source_embedding_layer(source_sequence)
+        source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
+
+        target_sequence = self.target_embedding_layer(target_sequence)
+        target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
+
+        # encoder
+        for layer in self.encoder_layers:
+            source_sequence = layer(source_sequence, source_pad_mask)
+
+        # decoder
+        for layer in self.decoder_layers:
+            target_sequence = layer(source_sequence,
+                                    target_sequence,
+                                    source_pad_mask,
+                                    target_pad_mask)
+
+        # prediction
+        token_prediction = self.token_prediction_head(target_sequence)
+
+        return token_prediction
+
+    def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
+
+        source_sequence, source_pad_mask, _ = self.tensor_trimming(source_text_ids)
+        # target_sequence, target_pad_mask, _ = self.tensor_trimming(target_sequence)
+
+        # embeddings
+        source_sequence = self.source_embedding_layer(source_sequence)
+        source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
+
+        # target_sequence = self.target_embedding_layer(target_sequence)
+        # target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
+
+        # encoder
+        for layer in self.encoder_layers:
+            source_sequence = layer(source_sequence, source_pad_mask)

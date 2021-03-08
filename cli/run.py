@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     args = utils.get_args()
 
-    utils.set_global_seed(args.seed)
+    pl.seed_everything(seed=args.seed)
 
     if args.load_data:
         logger.info('Loading data')
