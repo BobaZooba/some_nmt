@@ -49,7 +49,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         self.criterion = layers.LabelSmoothingLoss(smoothing=self.hparams.smoothing,
                                                    use_kl=self.hparams.use_kl,
-                                                   ignore_index=self.pad_index)
+                                                   ignore_index=self.hparams.pad_index)
 
     def configure_optimizers(self):
         """
