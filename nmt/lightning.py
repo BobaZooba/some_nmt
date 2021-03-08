@@ -24,7 +24,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from nmt import data, model, tokenizer
+from nmt import data, model, tokenizer, layers
 
 
 class LightningSequence2Sequence(pl.LightningModule, ABC):
@@ -59,7 +59,11 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
                                       lr=self.hparams.learning_rate,
                                       weight_decay=self.hparams.weight_decay)
 
-        return optimizer
+        scheduler = layers.NoamScheduler(optimizer,
+                                         model_dim=self.hparams.model_dim,
+                                         warmup_steps=self.hparams.warmup_steps)
+
+        return [optimizer], [scheduler]
 
     def get_dataloader(self, data_type: str, shuffle: bool = False) -> DataLoader:
         """
