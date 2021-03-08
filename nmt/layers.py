@@ -17,9 +17,10 @@ from typing import Optional, Tuple
 
 import torch
 import torch.nn.functional as F
+from nmt import activations
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-from nmt import activations
+from torch.optim.lr_scheduler import _LRScheduler
 
 
 def embedding_masking(x: torch.Tensor,
@@ -829,3 +830,20 @@ class LSTMTransformerDecoderLayer(nn.Module):
         target_sequence = embedding_masking(target_sequence, target_padding_mask)
 
         return target_sequence, memory
+
+
+class NoamScheduler(_LRScheduler):
+    """
+    From "Attention Is All You Need"
+    paper: https://arxiv.org/pdf/1706.03762.pdf
+    """
+
+    def __init__(self, optimizer, model_dim, warmup_steps=4000):
+        self.model_dim = model_dim
+        self.warmup_steps = warmup_steps
+        super().__init__(optimizer)
+
+    def get_lr(self):
+        last_epoch = max(1, self.last_epoch)
+        scale = self.model_dim ** (-0.5) * min(last_epoch ** (-0.5), last_epoch * self.warmup_steps ** (-1.5))
+        return [lr * scale for lr in self.base_lrs]

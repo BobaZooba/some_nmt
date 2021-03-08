@@ -137,7 +137,6 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         if self.config.weight_tying and self.config.embedding_dim == self.config.model_dim:
             self.target_embedding_layer.weight = self.token_prediction_head.weight
 
-    # YOUR CODE STARTS
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
         """
         Forward pass for sequence-to-sequence task
@@ -226,9 +225,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
         token_prediction = self.token_prediction_head(out_emb)
 
         return token_prediction
-    # YOUR CODE ENDS
 
-    # YOUR CODE STARTS
     def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
         """
         Function that generate translation
@@ -277,7 +274,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
             decoder_word_embeddings = self.target_embedding_layer(decoder_text_ids)
 
-            for _ in range(self.config.max_length):
+            for _ in range(self.config.max_length - 1):
 
                 decoded_sequence, memory = self.decoder_lstm(decoder_word_embeddings, memory)
 
@@ -308,13 +305,7 @@ class Sequence2SequenceWithAttentionModel(BaseSequence2Sequence):
 
                 decoder_word_embeddings = self.target_embedding_layer(token_predictions)
 
-        output_indices = [sample[:sample.index(self.eos_index)]
-                          if self.eos_index in sample
-                          else sample
-                          for sample in output_indices]
-
         return output_indices
-    # YOUR CODE ENDS
 
 
 class Transformer(BaseSequence2Sequence):
@@ -384,10 +375,10 @@ class Transformer(BaseSequence2Sequence):
 
         # embeddings
         source_sequence = self.source_embedding_layer(source_sequence)
-        source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
+        # source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
 
         target_sequence = self.target_embedding_layer(target_sequence)
-        target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
+        # target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
 
         # encoder
         for layer in self.encoder_layers:
@@ -407,18 +398,46 @@ class Transformer(BaseSequence2Sequence):
 
     def generate(self, source_text_ids: torch.Tensor) -> List[List[int]]:
 
-        source_sequence, source_pad_mask, _ = self.tensor_trimming(source_text_ids)
-        # target_sequence, target_pad_mask, _ = self.tensor_trimming(target_sequence)
+        self.eval()
 
-        # embeddings
-        source_sequence = self.source_embedding_layer(source_sequence)
-        source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
+        output_indices = [list() for _ in range(source_text_ids.size(0))]
 
-        # target_sequence = self.target_embedding_layer(target_sequence)
-        # target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
+        with torch.no_grad():
 
-        # encoder
-        for layer in self.encoder_layers:
-            source_sequence = layer(source_sequence, source_pad_mask)
+            source_sequence, source_pad_mask, _ = self.tensor_trimming(source_text_ids)
 
-        return []
+            source_sequence = self.source_embedding_layer(source_sequence)
+            source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
+
+            for layer in self.encoder_layers:
+                source_sequence = layer(source_sequence, source_pad_mask)
+
+            decoder_text_ids = torch.ones(source_text_ids.size(0), 1).long().to(source_sequence.device)
+            decoder_text_ids *= self.bos_index
+
+            target_sequence = self.target_embedding_layer(decoder_text_ids)
+            target_pad_mask = decoder_text_ids != 0
+
+            for _ in range(self.config.max_length - 1):
+
+                target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
+
+                for layer in self.decoder_layers:
+                    target_sequence = layer(source_sequence,
+                                            target_sequence,
+                                            source_pad_mask,
+                                            target_pad_mask)
+
+                token_logits = self.token_prediction_head(target_sequence[:, -1, :].unsqueeze(dim=1))
+                token_predictions = torch.softmax(token_logits, -1).argmax(dim=-1)
+
+                for n_sample in range(token_predictions.size(0)):
+                    token_id = token_predictions[n_sample][0].item()
+                    output_indices[n_sample].append(token_id)
+
+                decoder_text_ids = torch.cat((decoder_text_ids, token_predictions), dim=-1)
+
+                target_sequence = self.target_embedding_layer(decoder_text_ids)
+                target_pad_mask = decoder_text_ids != 0
+
+        return output_indices

@@ -198,6 +198,15 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         self.log(name='val_perplexity', value=np.exp(epoch_loss.item()),
                  prog_bar=False, on_step=False, on_epoch=True)
 
+    def postprocessing(self, output_indices: List[List[int]]) -> List[List[int]]:
+
+        output_indices = [sample[:sample.index(self.eos_index)]
+                          if self.eos_index in sample
+                          else sample
+                          for sample in output_indices]
+
+        return output_indices
+
     def generate(self, source_texts: List[str]) -> List[str]:
         """
         Translate from source texts (english) to target language (russian)
@@ -206,7 +215,8 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
         """
 
         tokenized = self.sequence2sequence_preparer.source_tokenize(source_texts)
-        generated_indices = self.model.generate(tokenized)
+        generated_indices = self.model.generate(source_text_ids=tokenized)
+        generated_indices = self.postprocessing(output_indices=generated_indices)
         generated_texts = self.sequence2sequence_preparer.target_language_tokenizer.decode_batch(
             generated_indices)
 
