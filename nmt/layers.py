@@ -763,14 +763,14 @@ class TransformerDecoderLayer(nn.Module):
                                    source_sequence,
                                    key_padding_mask=source_padding_mask)
 
-        hidden = hidden.transpose(0, 1)
-
         hidden = self.attention_dropout(hidden)
 
         if self.self_attention_fusion_gate is not None:
             target_sequence = self.attention_fusion_gate(target_sequence, hidden)
         else:
             target_sequence = target_sequence + hidden
+
+        target_sequence = target_sequence.transpose(0, 1)
 
         target_sequence = self.attention_norm(target_sequence)
 
