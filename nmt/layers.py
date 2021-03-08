@@ -722,17 +722,12 @@ class TransformerDecoderLayer(nn.Module):
 
         self.feed_forward_norm = nn.LayerNorm(model_dim)
 
-    def generate_square_subsequent_mask(self, sequence_length: int) -> torch.Tensor:
-        mask = (torch.triu(torch.ones(sequence_length, sequence_length)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask
-
     def forward(self,
                 source_sequence: torch.Tensor,
                 target_sequence: torch.Tensor,
+                target_attention_mask: Optional[torch.Tensor] = None,
                 source_padding_mask: Optional[torch.Tensor] = None,
-                target_padding_mask: Optional[torch.Tensor] = None,
-                target_attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+                target_padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         :param source_sequence:
         :param target_sequence:
@@ -764,13 +759,9 @@ class TransformerDecoderLayer(nn.Module):
         target_sequence = target_sequence.transpose(0, 1)
         source_sequence = source_sequence.transpose(0, 1)
 
-        decoder_causal_mask = self.generate_square_subsequent_mask(
-            sequence_length=target_sequence.size(0)).to(target_sequence.device)
-
         hidden, _ = self.attention(target_sequence,
                                    source_sequence,
                                    source_sequence,
-                                   attn_mask=decoder_causal_mask,
                                    key_padding_mask=~source_padding_mask)
 
         hidden = self.attention_dropout(hidden)

@@ -368,6 +368,11 @@ class Transformer(BaseSequence2Sequence):
         if self.config.weight_tying and not self.target_embedding_layer.is_factorized:
             self.token_prediction_head.weight = self.target_embedding_layer.token_embedding.weight
 
+    def generate_square_subsequent_mask(self, sequence_length: int) -> torch.Tensor:
+        mask = (torch.triu(torch.ones(sequence_length, sequence_length)) == 1).transpose(0, 1)
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
+
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
 
         source_sequence, source_pad_mask, _ = self.tensor_trimming(source_sequence)
@@ -384,10 +389,14 @@ class Transformer(BaseSequence2Sequence):
         for layer in self.encoder_layers:
             source_sequence = layer(source_sequence, source_pad_mask)
 
+        decoder_causal_mask = self.generate_square_subsequent_mask(
+            sequence_length=target_sequence.size(1)).to(target_sequence.device)
+
         # decoder
         for layer in self.decoder_layers:
             target_sequence = layer(source_sequence,
                                     target_sequence,
+                                    decoder_causal_mask,
                                     source_pad_mask,
                                     target_pad_mask)
 
