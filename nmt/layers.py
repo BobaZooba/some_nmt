@@ -761,7 +761,7 @@ class TransformerDecoderLayer(nn.Module):
         hidden, _ = self.attention(target_sequence,
                                    source_sequence,
                                    source_sequence,
-                                   key_padding_mask=source_padding_mask)
+                                   key_padding_mask=~source_padding_mask)
 
         hidden = self.attention_dropout(hidden)
 
