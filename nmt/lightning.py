@@ -47,9 +47,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         self.model = model.Transformer(config=self.hparams)
 
-        # YOUR CODE STARTS
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.hparams.pad_index)
-        # YOUR CODE ENDS
 
     def configure_optimizers(self):
         """
@@ -200,7 +198,7 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
     def postprocessing(self, output_indices: List[List[int]]) -> List[List[int]]:
 
-        output_indices = [sample[:sample.index(self.eos_index)]
+        output_indices = [sample[:sample.index(self.model.eos_index)]
                           if self.eos_index in sample
                           else sample
                           for sample in output_indices]
