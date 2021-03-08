@@ -375,10 +375,10 @@ class Transformer(BaseSequence2Sequence):
 
         # embeddings
         source_sequence = self.source_embedding_layer(source_sequence)
-        # source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
+        source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
 
         target_sequence = self.target_embedding_layer(target_sequence)
-        # target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
+        target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
 
         # encoder
         for layer in self.encoder_layers:
@@ -407,7 +407,7 @@ class Transformer(BaseSequence2Sequence):
             source_sequence, source_pad_mask, _ = self.tensor_trimming(source_text_ids)
 
             source_sequence = self.source_embedding_layer(source_sequence)
-            # source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
+            source_sequence = self.source_embedding_input_cnn(source_sequence, source_pad_mask)
 
             for layer in self.encoder_layers:
                 source_sequence = layer(source_sequence, source_pad_mask)
@@ -420,7 +420,7 @@ class Transformer(BaseSequence2Sequence):
 
             for _ in range(self.config.max_length - 1):
 
-                # target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
+                target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
 
                 for layer in self.decoder_layers:
                     target_sequence = layer(source_sequence,
