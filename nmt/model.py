@@ -358,7 +358,7 @@ class Transformer(BaseSequence2Sequence):
                                            dropout=self.config.transformer_dropout,
                                            activation=self.config.activation,
                                            use_fusion_gate=self.config.use_fusion_gate)
-            for _ in range(self.config.encoder_n_layers)])
+            for _ in range(self.config.encoder_num_layers)])
 
         self.decoder_layers = nn.ModuleList([
             layers.TransformerDecoderLayer(model_dim=self.config.model_dim,
@@ -368,7 +368,7 @@ class Transformer(BaseSequence2Sequence):
                                            dropout=self.config.transformer_dropout,
                                            activation=self.config.activation,
                                            use_fusion_gate=self.config.use_fusion_gate)
-            for _ in range(self.config.decoder_n_layers)])
+            for _ in range(self.config.decoder_num_layers)])
 
         self.token_prediction_head = torch.nn.Linear(in_features=self.config.model_dim,
                                                      out_features=self.config.vocab_size,
