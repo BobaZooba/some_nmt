@@ -47,7 +47,6 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         self.model = model.Transformer(config=self.hparams)
 
-        # self.criterion = nn.CrossEntropyLoss(ignore_index=self.hparams.pad_index)
         self.criterion = layers.LabelSmoothingLoss(smoothing=self.hparams.smoothing,
                                                    use_kl=self.hparams.use_kl,
                                                    ignore_index=self.pad_index)
