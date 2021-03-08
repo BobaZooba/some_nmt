@@ -832,6 +832,58 @@ class LSTMTransformerDecoderLayer(nn.Module):
         return target_sequence, memory
 
 
+class LabelSmoothingLoss(nn.Module):
+
+    def __init__(self, smoothing: float = 0.1, use_kl: bool = False, ignore_index: int = -100):
+        super().__init__()
+
+        assert 0 <= smoothing < 1
+
+        self.smoothing = smoothing
+        self.ignore_index = ignore_index
+        self.use_kl = use_kl
+
+    def smooth_one_hot(self, true_labels: torch.Tensor, classes: int) -> torch.Tensor:
+
+        confidence = 1.0 - self.smoothing
+
+        with torch.no_grad():
+            true_dist = torch.empty(size=(true_labels.size(0), classes), device=true_labels.device)
+            true_dist.fill_(self.smoothing / (classes - 1))
+            true_dist.scatter_(1, true_labels.data.unsqueeze(1), confidence)
+
+        return true_dist
+
+    def forward(self,
+                prediction: torch.Tensor,
+                target: torch.Tensor,
+                mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        :param prediction: [batch_size, num_classes]
+        :param target: [batch_size]
+        :param mask: [batch_size, num_classes] True if need
+        :return: scalar
+        """
+
+        if mask is not None:
+            prediction = prediction[(target != self.ignore_index) & mask, :]
+            target = target[(target != self.ignore_index) & mask]
+        else:
+            prediction = prediction[target != self.ignore_index, :]
+            target = target[target != self.ignore_index]
+
+        prediction = torch.nn.functional.log_softmax(prediction, dim=1)
+
+        target_smoothed_dist = self.smooth_one_hot(target, classes=prediction.size(-1))
+
+        if self.use_kl:
+            loss = F.kl_div(prediction, target_smoothed_dist, reduction='batchmean')
+        else:
+            loss = torch.mean(torch.sum(-target_smoothed_dist * prediction, dim=-1))
+
+        return loss
+
+
 class NoamScheduler(_LRScheduler):
     """
     From "Attention Is All You Need"
