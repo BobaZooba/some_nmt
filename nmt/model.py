@@ -429,6 +429,11 @@ class Transformer(BaseSequence2Sequence):
             target_sequence = self.target_embedding_layer(decoder_text_ids)
             target_pad_mask = decoder_text_ids != 0
 
+            decoder_causal_mask = self.generate_square_subsequent_mask(
+                sequence_length=target_sequence.size(1)).to(target_sequence.device)
+
+            decoder_causal_mask = decoder_causal_mask.unsqueeze(dim=0).repeat(target_sequence.size(0), 1, 1)
+
             for _ in range(self.config.max_length - 1):
 
                 target_sequence = self.target_embedding_input_cnn(target_sequence, target_pad_mask)
@@ -436,6 +441,7 @@ class Transformer(BaseSequence2Sequence):
                 for layer in self.decoder_layers:
                     target_sequence = layer(source_sequence,
                                             target_sequence,
+                                            decoder_causal_mask,
                                             source_pad_mask,
                                             target_pad_mask)
 
@@ -450,5 +456,10 @@ class Transformer(BaseSequence2Sequence):
 
                 target_sequence = self.target_embedding_layer(decoder_text_ids)
                 target_pad_mask = decoder_text_ids != 0
+
+                decoder_causal_mask = self.generate_square_subsequent_mask(
+                    sequence_length=target_sequence.size(1)).to(target_sequence.device)
+
+                decoder_causal_mask = decoder_causal_mask.unsqueeze(dim=0).repeat(target_sequence.size(0), 1, 1)
 
         return output_indices
