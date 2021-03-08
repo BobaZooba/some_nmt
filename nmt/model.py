@@ -392,6 +392,8 @@ class Transformer(BaseSequence2Sequence):
         decoder_causal_mask = self.generate_square_subsequent_mask(
             sequence_length=target_sequence.size(1)).to(target_sequence.device)
 
+        decoder_causal_mask = decoder_causal_mask.unsqueeze(dim=0).repeat(target_sequence.size(0), 1, 1)
+
         # decoder
         for layer in self.decoder_layers:
             target_sequence = layer(source_sequence,
