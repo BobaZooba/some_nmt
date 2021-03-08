@@ -420,3 +420,5 @@ class Transformer(BaseSequence2Sequence):
         # encoder
         for layer in self.encoder_layers:
             source_sequence = layer(source_sequence, source_pad_mask)
+
+        return []
