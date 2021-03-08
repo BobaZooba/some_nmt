@@ -113,8 +113,11 @@ def get_args() -> Namespace:
     parser.add_argument('--decoder_num_layers', type=int, default=8)
     parser.add_argument('--weight_tying', action='store_true')
 
+    parser.add_argument('--use_label_smoothing', action='store_true')
     parser.add_argument('--smoothing', type=float, default=0.1)
     parser.add_argument('--use_kl', action='store_true')
+
+    parser.add_argument('--use_scheduler', action='store_true')
     parser.add_argument('--warmup_steps', type=int, default=5_000)
     parser.add_argument('--learning_rate', type=float, default=5e-5)
     parser.add_argument('--weight_decay', type=float, default=0.01)

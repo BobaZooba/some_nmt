@@ -22,9 +22,8 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
-
 from nmt import data, model, tokenizer, layers
+from torch.utils.data import DataLoader
 
 
 class LightningSequence2Sequence(pl.LightningModule, ABC):
@@ -47,9 +46,12 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         self.model = model.Transformer(config=self.hparams)
 
-        self.criterion = layers.LabelSmoothingLoss(smoothing=self.hparams.smoothing,
-                                                   use_kl=self.hparams.use_kl,
-                                                   ignore_index=self.hparams.pad_index)
+        if self.hparams.use_label_smoothing:
+            self.criterion = layers.LabelSmoothingLoss(smoothing=self.hparams.smoothing,
+                                                       use_kl=self.hparams.use_kl,
+                                                       ignore_index=self.hparams.pad_index)
+        else:
+            self.criterion = nn.CrossEntropyLoss(ignore_index=self.hparams.pad_index)
 
     def configure_optimizers(self):
         """
@@ -61,11 +63,14 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
                                       lr=self.hparams.learning_rate,
                                       weight_decay=self.hparams.weight_decay)
 
-        scheduler = layers.NoamScheduler(optimizer,
-                                         model_dim=self.hparams.model_dim,
-                                         warmup_steps=self.hparams.warmup_steps)
+        if self.hparams.use_scheduler:
+            scheduler = layers.NoamScheduler(optimizer,
+                                             model_dim=self.hparams.model_dim,
+                                             warmup_steps=self.hparams.warmup_steps)
 
-        return [optimizer], [scheduler]
+            return [optimizer], [scheduler]
+        else:
+            return optimizer
 
     def get_dataloader(self, data_type: str, shuffle: bool = False) -> DataLoader:
         """
@@ -124,7 +129,6 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         return logits
 
-    # YOUR CODE STARTS
     def compute_loss(self, logits: torch.Tensor, target_criterion_ids: torch.Tensor) -> torch.Tensor:
         """
         How we compute loss for sequence-to-sequence task
@@ -139,7 +143,6 @@ class LightningSequence2Sequence(pl.LightningModule, ABC):
 
         loss = self.criterion(prediction, target)
         return loss
-    # YOUR CODE ENDS
 
     def step(self, batch: (torch.Tensor, torch.Tensor, torch.Tensor)) -> torch.Tensor:
         """
