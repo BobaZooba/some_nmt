@@ -324,7 +324,7 @@ class Transformer(BaseSequence2Sequence):
 
         self.source_embedding_layer = layers.TransformerEmbedding(embedding_dim=self.config.model_dim,
                                                                   vocab_size=self.config.vocab_size,
-                                                                  n_positions=self.config.max_length,
+                                                                  n_positions=self.config.max_length + 1,
                                                                   token_embedding_dim=self.config.embedding_dim,
                                                                   dropout=self.config.embedding_dropout,
                                                                   use_spatial_dropout=False,
@@ -338,7 +338,7 @@ class Transformer(BaseSequence2Sequence):
 
         self.target_embedding_layer = layers.TransformerEmbedding(embedding_dim=self.config.model_dim,
                                                                   vocab_size=self.config.vocab_size,
-                                                                  n_positions=self.config.max_length,
+                                                                  n_positions=self.config.max_length + 1,
                                                                   token_embedding_dim=self.config.embedding_dim,
                                                                   dropout=self.config.embedding_dropout,
                                                                   use_spatial_dropout=False,
